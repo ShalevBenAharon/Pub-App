@@ -1,0 +1,32 @@
+# =====================================
+# Secrets
+# =====================================
+PUB APP/Monthly Email Setup/email-config.txt
+
+# Logs
+*.log
+
+# PowerShell transcripts
+*.txt.log
+
+# OS files
+Thumbs.db
+Desktop.ini
+
+# Windows shortcuts
+*.lnk
+
+# IDE files
+.vscode/
+.idea/
+
+# Node.js (if you add a server later)
+node_modules/
+
+# Environment files
+.env
+.env.*
+
+# Temporary files
+*.tmp
+*.temp
