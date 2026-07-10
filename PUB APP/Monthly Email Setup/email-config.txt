@@ -1,0 +1,5 @@
+SenderEmail=shalevbenaharon@gmail.com
+AppPassword=ruyt duro rdou ntpz
+AccountantEmail=shalevbenaharon@gmail.com
+SendDay=10
+SendTime=08:56

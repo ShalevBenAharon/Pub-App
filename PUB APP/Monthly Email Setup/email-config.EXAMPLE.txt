@@ -1,0 +1,5 @@
+SenderEmail=youraddress@gmail.com
+AppPassword=your16charapppassword
+AccountantEmail=accountant@example.com
+SendDay=5
+SendTime=09:00
