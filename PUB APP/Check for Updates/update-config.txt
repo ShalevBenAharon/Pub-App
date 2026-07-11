@@ -1,0 +1,4 @@
+GitHubUser=ShalevBenAharon
+GitHubRepo=Pub-App
+Branch=main
+RepoSubfolder=PUB APP
