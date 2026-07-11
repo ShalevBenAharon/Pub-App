@@ -1,3 +1,6 @@
 GitHubUser=your-github-username
 GitHubRepo=your-repo-name
 Branch=main
+# Only needed if everything was pushed inside a subfolder of the repo
+# rather than at the repo's own root (leave blank/remove this line otherwise):
+RepoSubfolder=PUB APP

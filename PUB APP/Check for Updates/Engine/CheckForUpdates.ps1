@@ -43,14 +43,29 @@ if (-not $config["GitHubUser"] -or -not $config["GitHubRepo"] -or $config["GitHu
 }
 
 $branch = if ($config["Branch"]) { $config["Branch"] } else { "main" }
+# Optional: set this in update-config.txt if the repo has everything nested
+# inside a subfolder (e.g. because the whole project folder was dragged into
+# GitHub Desktop) rather than pushed as the repo's own root contents.
+$repoSubfolder = if ($config["RepoSubfolder"]) { $config["RepoSubfolder"].Trim("/") } else { "" }
+
+# Encode each path segment separately (not the whole path) so spaces and
+# other special characters in folder names - "Check for Updates", for
+# instance - turn into a URL GitHub will actually resolve, while keeping
+# the "/" separators intact.
+function ConvertTo-UrlPath($relPath) {
+    ($relPath -split '/' | ForEach-Object { [Uri]::EscapeDataString($_) }) -join '/'
+}
+
 $baseUrl = "https://raw.githubusercontent.com/$($config['GitHubUser'])/$($config['GitHubRepo'])/$branch/"
+if ($repoSubfolder) { $baseUrl += (ConvertTo-UrlPath $repoSubfolder) + "/" }
 
 $localVersion = if (Test-Path $versionPath) { (Get-Content $versionPath -Raw).Trim() } else { "0.0.0" }
 Write-Log "Installed version: $localVersion"
 
 # ---- Check the remote version, failing gracefully if there's no internet ----
 try {
-    $remoteVersion = (Invoke-WebRequest -Uri ($baseUrl + "Check for Updates/Engine/version.txt") -UseBasicParsing -TimeoutSec 10).Content.Trim()
+    $versionUrl = $baseUrl + (ConvertTo-UrlPath "Check for Updates/Engine/version.txt")
+    $remoteVersion = (Invoke-WebRequest -Uri $versionUrl -UseBasicParsing -TimeoutSec 10).Content.Trim()
 }
 catch {
     Write-Host ""
@@ -114,7 +129,7 @@ $downloaded = @{}
 $failed = $false
 
 foreach ($relPath in $filesToSync) {
-    $url = $baseUrl + $relPath
+    $url = $baseUrl + (ConvertTo-UrlPath $relPath)
     $tempFile = Join-Path $tempDir ([guid]::NewGuid().ToString("N"))
     try {
         Invoke-WebRequest -Uri $url -OutFile $tempFile -UseBasicParsing -TimeoutSec 20
