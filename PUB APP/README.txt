@@ -19,7 +19,8 @@ WHAT'S IN THIS FOLDER
 - Create Desktop Icon.bat   <- one-time: adds a Desktop shortcut
 - README.txt                <- this file
 - App/                      <- the app's engine (you don't need to open this)
-- Monthly Email Setup/      <- automatic accountant emails (one-time setup)
+- Monthly Email Setup/      <- automatic accountant emails (optional)
+- Check for Updates/        <- get new versions of the app (optional)
 
 GETTING A DESKTOP ICON (recommended, one-time)
 --------------------------------------------------
@@ -103,3 +104,48 @@ TESTING IT / CHANGING THE ACCOUNTANT'S EMAIL:
   Email.bat" afterward so the schedule picks up the change.
 - Check "SendMonthlyReport.log" inside the "Engine" subfolder if an
   email doesn't arrive - it logs exactly what happened on each run.
+
+GETTING UPDATES (optional - for copies of this app given to a customer)
+------------------------------------------------------------------------------
+Everything for this lives in the "Check for Updates" folder. If you're
+maintaining this app for someone else, this lets them pull down new
+versions you publish, without you needing to hand them files directly
+each time.
+
+That folder only has what you actually need to touch: the config file
+and the update button. The script and version tracker are tucked
+inside its "Engine" subfolder - you shouldn't need to open that unless
+troubleshooting (e.g. checking UpdateLog.txt).
+
+ONE-TIME SETUP (you, the maintainer):
+1. Create a free GitHub account if you don't have one, and a repository
+   (it needs to be public, so the update check can reach it without
+   anyone signing in).
+2. Push this whole folder's contents to that repository - EXCEPT the
+   files listed in ".gitignore" (already set up to exclude
+   current-data.json, email-config.txt, and log files, so no real
+   customer data or the Gmail password ever ends up on GitHub).
+3. On each computer that should receive updates (yours for testing, and
+   your customer's), inside "Check for Updates", copy
+   "update-config.EXAMPLE.txt", rename it to "update-config.txt", and
+   fill in:
+     GitHubUser=<your GitHub username>
+     GitHubRepo=<the repository name>
+     Branch=main
+
+PUBLISHING AN UPDATE:
+1. Make your change to the files in this folder as usual.
+2. Open "Check for Updates/Engine/version.txt" and bump the number
+   (e.g. 1.0.0 -> 1.0.1).
+3. Push the changed files to GitHub (commit + push, same as any other
+   update to the repo).
+
+WHAT THE CUSTOMER DOES:
+Whenever you tell them there's an update (or just periodically), they
+double-click "Check for Updates.bat" (inside the "Check for Updates"
+folder). It compares their installed version against what's on GitHub,
+and if there's a newer one, downloads and installs it automatically -
+then asks them to restart "Start Pub Tracker.bat". If there's no
+internet or nothing's changed, it says so and leaves everything alone.
+Their data, backups, and email settings are never touched by an
+update - only the app's own files are replaced.

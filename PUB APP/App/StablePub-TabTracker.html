@@ -1,194 +1,26 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="he" dir="rtl">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>פאב האורווה</title>
 <link rel="icon" type="image/png" href="icon_512.png">
-<style>
-  :root{
-    --bg:#f5efe4;
-    --panel:#fffaf0;
-    --wood:#5a3a22;
-    --wood-dark:#3e2815;
-    --gold:#b8862f;
-    --gold-light:#e6c76a;
-    --text:#2b1d14;
-    --muted:#7a6a58;
-    --danger:#a33;
-    --danger-dark:#822;
-    --good:#3a7a3a;
-    --border:#ddccae;
-  }
-  *{box-sizing:border-box;}
-  body{
-    margin:0;
-    font-family:Georgia,'Segoe UI',serif;
-    background:var(--bg);
-    color:var(--text);
-  }
-  header{
-    background:linear-gradient(180deg,var(--wood),var(--wood-dark));
-    color:var(--gold-light);
-    padding:18px 24px;
-    text-align:center;
-    box-shadow:0 2px 6px rgba(0,0,0,.3);
-  }
-  header h1{margin:0;font-size:1.6em;letter-spacing:1px;}
-  header p{margin:4px 0 0;font-size:.85em;color:#e8dcc0;}
-  nav{
-    display:flex;
-    background:var(--wood-dark);
-    flex-wrap:wrap;
-  }
-  nav button{
-    flex:1;
-    min-width:120px;
-    background:transparent;
-    border:none;
-    color:#e8dcc0;
-    padding:12px 8px;
-    font-size:.95em;
-    cursor:pointer;
-    border-bottom:3px solid transparent;
-  }
-  nav button:hover{background:rgba(255,255,255,.08);}
-  nav button.active{
-    border-bottom:3px solid var(--gold);
-    color:var(--gold-light);
-    background:rgba(255,255,255,.05);
-  }
-  main{
-    max-width:980px;
-    margin:0 auto;
-    padding:20px;
-  }
-  section.view{display:none;}
-  section.view.active{display:block;}
-  .card{
-    background:var(--panel);
-    border:1px solid var(--border);
-    border-radius:8px;
-    padding:18px 20px;
-    margin-bottom:18px;
-    box-shadow:0 1px 3px rgba(0,0,0,.06);
-  }
-  .card h2{
-    margin-top:0;
-    font-size:1.15em;
-    color:var(--wood-dark);
-    border-bottom:2px solid var(--gold-light);
-    padding-bottom:8px;
-  }
-  .row{
-    display:flex;
-    gap:10px;
-    flex-wrap:wrap;
-    align-items:flex-end;
-    margin-bottom:14px;
-  }
-  .field{display:flex;flex-direction:column;gap:4px;}
-  .field label{font-size:.78em;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;}
-  input,select{
-    padding:7px 9px;
-    border:1px solid var(--border);
-    border-radius:5px;
-    font-size:.95em;
-    font-family:inherit;
-    background:#fff;
-    color:var(--text);
-  }
-  button.btn{
-    background:var(--gold);
-    color:#2b1d14;
-    border:none;
-    padding:8px 16px;
-    border-radius:5px;
-    font-weight:bold;
-    cursor:pointer;
-    font-size:.92em;
-  }
-  button.btn:hover{background:var(--gold-light);}
-  button.btn.secondary{background:var(--wood);color:#f5efe4;}
-  button.btn.secondary:hover{background:var(--wood-dark);}
-  button.btn.danger{background:var(--danger);color:#fff;}
-  button.btn.danger:hover{background:var(--danger-dark);}
-  button.small{
-    padding:4px 10px;
-    font-size:.82em;
-    border-radius:4px;
-    border:1px solid var(--border);
-    background:#fff;
-    cursor:pointer;
-  }
-  button.small:hover{background:#f0e6d0;}
-  table{
-    width:100%;
-    border-collapse:collapse;
-    margin-top:6px;
-    font-size:.92em;
-  }
-  th,td{
-    text-align:left;
-    padding:8px 10px;
-    border-bottom:1px solid var(--border);
-  }
-  th{
-    background:#f0e6d0;
-    color:var(--wood-dark);
-    font-size:.8em;
-    text-transform:uppercase;
-    letter-spacing:.4px;
-  }
-  tr:hover td{background:#faf4e6;}
-  .muted{color:var(--muted);font-size:.85em;}
-  .badge{
-    display:inline-block;
-    padding:2px 8px;
-    border-radius:10px;
-    font-size:.75em;
-    font-weight:bold;
-  }
-  .badge.active{background:#dcefdc;color:var(--good);}
-  .badge.inactive{background:#eee;color:#888;}
-  .hint{
-    background:#fbf0d9;
-    border:1px solid var(--gold-light);
-    padding:10px 14px;
-    border-radius:6px;
-    font-size:.9em;
-    margin-bottom:14px;
-  }
-  .total-line{
-    text-align:right;
-    font-weight:bold;
-    font-size:1.05em;
-    margin-top:8px;
-    color:var(--wood-dark);
-  }
-  .grand-total{font-size:1.15em;color:var(--danger-dark);}
-  footer{
-    text-align:center;
-    padding:16px;
-    color:var(--muted);
-    font-size:.8em;
-  }
-  ::placeholder{color:#b0a48c;}
-</style>
+<link rel="stylesheet" href="styles.css">
 </head>
 <body>
 
 <header>
+  <button id="btnLangToggle" class="lang-toggle" type="button">English</button>
   <h1>פאב האורווה</h1>
-  <p>Nightly Tab Tracker</p>
+  <p data-i18n="subtitle">Nightly Tab Tracker</p>
 </header>
 
 <nav>
-  <button data-view="log" class="active">Log Drinks</button>
-  <button data-view="members">Members</button>
-  <button data-view="menu">Menu &amp; Prices</button>
-  <button data-view="reports">Monthly Report</button>
-  <button data-view="backup">Backup &amp; Data</button>
+  <button data-view="log" class="active" data-i18n="nav_log">Log Drinks</button>
+  <button data-view="members" data-i18n="nav_members">Members</button>
+  <button data-view="menu" data-i18n="nav_menu">Menu &amp; Prices</button>
+  <button data-view="reports" data-i18n="nav_reports">Monthly Report</button>
+  <button data-view="backup" data-i18n="nav_backup">Backup &amp; Data</button>
 </nav>
 
 <main>
@@ -197,82 +29,96 @@
   <section id="view-log" class="view active">
     <div id="backupReminder" class="hint" style="display:none;">
       <span id="backupReminderText"></span>
-      <button class="btn small" id="btnBackupFromReminder" style="margin-left:8px;">Back Up Now</button>
+      <button class="btn small" id="btnBackupFromReminder" style="margin-left:8px;" data-i18n="backup_now_btn">Back Up Now</button>
     </div>
     <div class="card">
-      <h2>Add to a Tab</h2>
+      <h2 data-i18n="log_card_title">Add to a Tab</h2>
       <div id="logHint" class="hint" style="display:none;"></div>
       <div class="row">
         <div class="field">
-          <label>Date</label>
+          <label data-i18n="label_date">Date</label>
           <input type="date" id="logDate">
         </div>
         <div class="field">
-          <label>Search Member</label>
-          <input type="text" id="searchMember" placeholder="name or #" style="width:120px;">
+          <label data-i18n="label_search_member">Search Member</label>
+          <input type="text" id="searchMember" placeholder="name or #" style="width:120px;" data-i18n-placeholder="placeholder_search_member">
         </div>
         <div class="field">
-          <label>Member</label>
+          <label data-i18n="label_member">Member</label>
           <select id="logMember"></select>
         </div>
         <div class="field">
-          <label>Search Item</label>
-          <input type="text" id="searchItem" placeholder="item name" style="width:120px;">
+          <label data-i18n="label_search_item">Search Item</label>
+          <input type="text" id="searchItem" placeholder="item name" style="width:120px;" data-i18n-placeholder="placeholder_search_item">
         </div>
         <div class="field">
-          <label>Item</label>
+          <label data-i18n="label_item">Item</label>
           <select id="logItem"></select>
         </div>
         <div class="field">
-          <label>Qty</label>
+          <label data-i18n="label_qty">Qty</label>
           <input type="number" id="logQty" value="1" min="1" step="1" style="width:70px;">
         </div>
-        <button class="btn" id="btnAddEntry">Add</button>
+        <button class="btn" id="btnAddEntry" data-i18n="btn_add">Add</button>
       </div>
     </div>
 
     <div class="card">
-      <h2>Entries for Selected Date</h2>
+      <h2 data-i18n="log_entries_title">Entries for Selected Date</h2>
       <table id="logTable">
-        <thead><tr><th>Time</th><th>Member #</th><th>Member</th><th>Item</th><th>Qty</th><th>Unit Price</th><th>Line Total</th><th></th></tr></thead>
+        <thead><tr>
+          <th data-i18n="th_time">Time</th>
+          <th data-i18n="th_member_num">Member #</th>
+          <th data-i18n="th_member">Member</th>
+          <th data-i18n="th_item">Item</th>
+          <th data-i18n="th_qty">Qty</th>
+          <th data-i18n="th_unit_price">Unit Price</th>
+          <th data-i18n="th_line_total">Line Total</th>
+          <th></th>
+        </tr></thead>
         <tbody></tbody>
       </table>
-      <div class="total-line">Day total: <span id="logDayTotal">0.00</span></div>
+      <div class="total-line"><span data-i18n="day_total_label">Day total:</span> <span id="logDayTotal">0.00</span></div>
     </div>
   </section>
 
   <!-- MEMBERS VIEW -->
   <section id="view-members" class="view">
     <div class="card">
-      <h2>Add Member</h2>
+      <h2 data-i18n="members_add_title">Add Member</h2>
       <div class="row">
         <div class="field">
-          <label>Member Number</label>
-          <input type="text" id="newMemberNumber" placeholder="e.g. 104" style="width:110px;">
+          <label data-i18n="label_member_number">Member Number</label>
+          <input type="text" id="newMemberNumber" placeholder="e.g. 104" style="width:110px;" data-i18n-placeholder="placeholder_member_number">
         </div>
         <div class="field">
-          <label>Name</label>
-          <input type="text" id="newMemberName" placeholder="e.g. Yossi Cohen">
+          <label data-i18n="label_name">Name</label>
+          <input type="text" id="newMemberName" placeholder="e.g. Yossi Cohen" data-i18n-placeholder="placeholder_member_name">
         </div>
-        <button class="btn" id="btnAddMember">Add Member</button>
+        <button class="btn" id="btnAddMember" data-i18n="btn_add_member">Add Member</button>
       </div>
     </div>
     <div class="card">
-      <h2>Import Members from CSV</h2>
-      <p class="muted">Upload a CSV file with member numbers and names to add many members at once, instead of typing them in one by one. If your list is currently an Excel file, open it and use File &rarr; Save As (or Export) &rarr; CSV first, then upload that file here. You'll see a preview and can confirm before anything is added &mdash; existing members are never overwritten.</p>
+      <h2 data-i18n="import_csv_title">Import Members from CSV</h2>
+      <p class="muted" data-i18n="import_csv_desc">Upload a CSV file with member numbers and names to add many members at once, instead of typing them in one by one. If your list is currently an Excel file, open it and use File &rarr; Save As (or Export) &rarr; CSV first, then upload that file here. You'll see a preview and can confirm before anything is added &mdash; existing members are never overwritten.</p>
       <div class="row">
         <div class="field">
-          <label>CSV File</label>
+          <label data-i18n="label_csv_file">CSV File</label>
           <input type="file" id="importMembersFile" accept=".csv,text/csv">
         </div>
-        <button class="btn secondary" id="btnPreviewImport">Preview Import</button>
+        <button class="btn secondary" id="btnPreviewImport" data-i18n="btn_preview_import">Preview Import</button>
       </div>
       <div id="importPreviewBox"></div>
     </div>
     <div class="card">
-      <h2>All Members</h2>
+      <h2 data-i18n="all_members_title">All Members</h2>
       <table id="membersTable">
-        <thead><tr><th>Member #</th><th>Name</th><th>Status</th><th></th></tr></thead>
+        <thead><tr>
+          <th data-i18n="th_member_num">Member #</th>
+          <th data-i18n="th_name">Name</th>
+          <th data-i18n="th_status">Status</th>
+          <th></th>
+        </tr></thead>
         <tbody></tbody>
       </table>
     </div>
@@ -281,66 +127,79 @@
   <!-- MENU VIEW -->
   <section id="view-menu" class="view">
     <div class="card">
-      <h2>Add Beverage / Food Item</h2>
+      <h2 data-i18n="menu_add_title">Add Beverage / Food Item</h2>
       <div class="row">
         <div class="field">
-          <label>Name</label>
+          <label data-i18n="label_name">Name</label>
           <input type="text" id="newItemName" placeholder="e.g. Draft Beer">
         </div>
         <div class="field">
-          <label>Category</label>
+          <label data-i18n="label_category">Category</label>
           <select id="newItemCategory">
-            <option value="Drink">Drink</option>
-            <option value="Food">Food</option>
-            <option value="Other">Other</option>
+            <option value="Drink" data-i18n="opt_drink">Drink</option>
+            <option value="Food" data-i18n="opt_food">Food</option>
+            <option value="Other" data-i18n="opt_other">Other</option>
           </select>
         </div>
         <div class="field">
-          <label>Price</label>
+          <label data-i18n="label_price">Price</label>
           <input type="number" id="newItemPrice" min="0" step="0.5" style="width:90px;">
         </div>
         <div class="field">
-          <label>Starting Stock</label>
+          <label data-i18n="label_starting_stock">Starting Stock</label>
           <input type="number" id="newItemStock" min="0" step="1" value="0" style="width:90px;">
         </div>
-        <button class="btn" id="btnAddItem">Add Item</button>
+        <button class="btn" id="btnAddItem" data-i18n="btn_add_item">Add Item</button>
       </div>
     </div>
     <div class="card">
-      <h2>Menu</h2>
+      <h2 data-i18n="menu_title">Menu</h2>
       <div class="row">
         <div class="field">
-          <label>Currency symbol</label>
+          <label data-i18n="label_currency">Currency symbol</label>
           <input type="text" id="currencySymbol" style="width:60px;">
         </div>
-        <button class="btn small" id="btnSaveCurrency">Save</button>
+        <button class="btn small" id="btnSaveCurrency" data-i18n="btn_save">Save</button>
       </div>
       <table id="menuTable">
-        <thead><tr><th>Name</th><th>Category</th><th>Price</th><th>Stock</th><th>Status</th><th></th></tr></thead>
+        <thead><tr>
+          <th data-i18n="th_name">Name</th>
+          <th data-i18n="th_category">Category</th>
+          <th data-i18n="th_price">Price</th>
+          <th data-i18n="th_stock">Stock</th>
+          <th data-i18n="th_status">Status</th>
+          <th></th>
+        </tr></thead>
         <tbody></tbody>
       </table>
-      <p class="muted">Changing a price only affects new entries added from now on &mdash; past nights keep the price that was charged at the time. Stock goes down automatically when a sale is logged, and comes back if you delete that entry.</p>
+      <p class="muted" data-i18n="menu_note">Changing a price only affects new entries added from now on &mdash; past nights keep the price that was charged at the time. Stock goes down automatically when a sale is logged, and comes back if you delete that entry.</p>
     </div>
   </section>
 
   <!-- REPORTS VIEW -->
   <section id="view-reports" class="view">
     <div class="card">
-      <h2>Monthly Report</h2>
+      <h2 data-i18n="reports_title">Monthly Report</h2>
       <div class="row">
         <div class="field">
-          <label>Month</label>
+          <label data-i18n="label_month">Month</label>
           <input type="month" id="reportMonth">
         </div>
-        <button class="btn" id="btnShowReport">Show Report</button>
-        <button class="btn secondary" id="btnExportSummary">Download Summary CSV</button>
-        <button class="btn secondary" id="btnExportDetailed">Download Detailed CSV</button>
+        <button class="btn" id="btnShowReport" data-i18n="btn_show_report">Show Report</button>
+        <button class="btn secondary" id="btnExportSummary" data-i18n="btn_export_summary">Download Summary CSV</button>
+        <button class="btn secondary" id="btnExportDetailed" data-i18n="btn_export_detailed">Download Detailed CSV</button>
       </div>
       <table id="reportTable">
-        <thead><tr><th>Member #</th><th>Member</th><th>Items</th><th>Total Due</th><th></th></tr></thead>
+        <thead><tr>
+          <th data-i18n="th_member_num">Member #</th>
+          <th data-i18n="th_member">Member</th>
+          <th data-i18n="th_items">Items</th>
+          <th data-i18n="th_total_due">Total Due</th>
+          <th></th>
+        </tr></thead>
         <tbody></tbody>
       </table>
-      <div class="total-line grand-total">Grand total: <span id="reportGrandTotal">0.00</span></div>
+      <div class="total-line grand-total"><span data-i18n="grand_total_label">Grand total:</span> <span id="reportGrandTotal">0.00</span></div>
       <div id="reportDetailBox"></div>
     </div>
   </section>
@@ -348,805 +207,28 @@
   <!-- BACKUP VIEW -->
   <section id="view-backup" class="view">
     <div class="card">
-      <h2>Backup &amp; Restore</h2>
-      <p class="muted">Everything (members, menu, tabs) is saved automatically on this computer &mdash; you don't need to do anything for day-to-day use. This is just a safety copy in case this computer is ever replaced, lost, or its browser data is cleared.</p>
-      <p class="muted"><strong>Where to put the backup file:</strong> when you click Download, your browser saves it to its Downloads folder. Move (or save) that file into your OneDrive or Google Drive folder so it's automatically copied off this computer too. You'll get a reminder here (and on the Log Drinks tab) if it's been a while since your last backup.</p>
+      <h2 data-i18n="backup_title">Backup &amp; Restore</h2>
+      <p class="muted" data-i18n="backup_desc1">Everything (members, menu, tabs) is saved automatically on this computer &mdash; you don't need to do anything for day-to-day use. This is just a safety copy in case this computer is ever replaced, lost, or its browser data is cleared.</p>
+      <p class="muted" data-i18n="backup_desc2"><strong>Where to put the backup file:</strong> when you click Download, your browser saves it to its Downloads folder. Move (or save) that file into your OneDrive or Google Drive folder so it's automatically copied off this computer too. You'll get a reminder here (and on the Log Drinks tab) if it's been a while since your last backup.</p>
       <p class="muted" id="lastBackupInfo"></p>
       <div class="row">
-        <button class="btn" id="btnBackup">Download Backup (.json)</button>
+        <button class="btn" id="btnBackup" data-i18n="btn_download_backup">Download Backup (.json)</button>
       </div>
       <div class="row">
         <div class="field">
-          <label>Restore from a backup file</label>
+          <label data-i18n="label_restore_file">Restore from a backup file</label>
           <input type="file" id="restoreFile" accept=".json">
         </div>
-        <button class="btn secondary" id="btnRestore">Restore</button>
+        <button class="btn secondary" id="btnRestore" data-i18n="btn_restore">Restore</button>
       </div>
     </div>
   </section>
 
 </main>
 
-<footer>Stable Pub Tab Tracker &mdash; data stored locally in this browser</footer>
+<footer data-i18n="footer_text">Stable Pub Tab Tracker &mdash; data stored locally in this browser</footer>
 
-<script>
-(function(){
-  "use strict";
-  var STORAGE_KEY = "stablePubData_v1";
-
-  function uid(){
-    return Date.now().toString(36) + Math.random().toString(36).slice(2,7);
-  }
-
-  function defaultData(){
-    return { members: [], items: [], entries: [], settings: { currency: "₪" } };
-  }
-
-  function load(){
-    try{
-      var raw = localStorage.getItem(STORAGE_KEY);
-      if(!raw) return defaultData();
-      var parsed = JSON.parse(raw);
-      if(!parsed.settings) parsed.settings = { currency: "₪" };
-      if(!parsed.members) parsed.members = [];
-      if(!parsed.items) parsed.items = [];
-      if(!parsed.entries) parsed.entries = [];
-      // migrate older data that predates member numbers / stock
-      parsed.members.forEach(function(m){ if(m.number===undefined) m.number = ""; });
-      parsed.items.forEach(function(it){ if(it.stock===undefined) it.stock = 0; });
-      return parsed;
-    }catch(e){
-      alert("Could not read saved data, starting fresh. (" + e.message + ")");
-      return defaultData();
-    }
-  }
-
-  function save(){
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-    // Also mirror to disk via the local server, if it's running (i.e. the
-    // app was opened through "Start Pub Tracker.bat"). This keeps a
-    // current-data.json file always up to date in the app's folder, so
-    // the monthly report script always has fresh data without anyone
-    // needing to click "Download Backup" first. Silently does nothing
-    // if the app was just opened as a plain file instead.
-    try{
-      fetch("/api/save", {
-        method: "POST",
-        headers: {"Content-Type": "application/json; charset=utf-8"},
-        body: JSON.stringify(data)
-      }).catch(function(){});
-    }catch(e){}
-  }
-
-  var data = load();
-
-  function money(n){
-    return (Math.round(n*100)/100).toFixed(2);
-  }
-  function currency(){
-    return data.settings.currency || "";
-  }
-
-  // ---------- Navigation ----------
-  var navButtons = document.querySelectorAll("nav button");
-  navButtons.forEach(function(btn){
-    btn.addEventListener("click", function(){
-      navButtons.forEach(function(b){ b.classList.remove("active"); });
-      btn.classList.add("active");
-      document.querySelectorAll("section.view").forEach(function(s){ s.classList.remove("active"); });
-      document.getElementById("view-" + btn.dataset.view).classList.add("active");
-      if(btn.dataset.view === "members") renderMembers();
-      if(btn.dataset.view === "menu") renderMenu();
-      if(btn.dataset.view === "log") renderLog();
-      if(btn.dataset.view === "backup") renderBackupStatus();
-    });
-  });
-
-  // ---------- CSV helpers ----------
-  function csvField(v){
-    v = (v === undefined || v === null) ? "" : String(v);
-    if(/[",\n]/.test(v)){
-      v = '"' + v.replace(/"/g,'""') + '"';
-    }
-    return v;
-  }
-  function downloadCsv(filename, rows){
-    var content = rows.map(function(r){ return r.map(csvField).join(","); }).join("\r\n");
-    var blob = new Blob(["﻿" + content], {type:"text/csv;charset=utf-8;"});
-    var url = URL.createObjectURL(blob);
-    var a = document.createElement("a");
-    a.href = url; a.download = filename;
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  }
-  function downloadJson(filename, obj){
-    var blob = new Blob([JSON.stringify(obj,null,2)], {type:"application/json"});
-    var url = URL.createObjectURL(blob);
-    var a = document.createElement("a");
-    a.href = url; a.download = filename;
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  }
-
-  // ================= MEMBERS =================
-  function renderMembers(){
-    var tbody = document.querySelector("#membersTable tbody");
-    tbody.innerHTML = "";
-    data.members.slice().sort(function(a,b){return (a.number||"").localeCompare(b.number||"", undefined, {numeric:true});}).forEach(function(m){
-      var hasEntries = data.entries.some(function(e){return e.memberId===m.id;});
-      var tr = document.createElement("tr");
-      tr.innerHTML =
-        '<td></td>'+
-        '<td></td>'+
-        '<td><span class="badge '+(m.active?'active':'inactive')+'">'+(m.active?'Active':'Inactive')+'</span></td>'+
-        '<td></td>';
-
-      var numberTd = tr.children[0];
-      var numberInput = document.createElement("input");
-      numberInput.type = "text";
-      numberInput.value = m.number;
-      numberInput.style.width = "80px";
-      numberTd.appendChild(numberInput);
-
-      var nameTd = tr.children[1];
-      var nameInput = document.createElement("input");
-      nameInput.type = "text";
-      nameInput.value = m.name;
-      nameInput.style.width = "160px";
-      nameTd.appendChild(nameInput);
-
-      var editSaveBtn = document.createElement("button");
-      editSaveBtn.className = "small";
-      editSaveBtn.style.marginLeft = "6px";
-      editSaveBtn.textContent = "Save";
-      editSaveBtn.onclick = function(){
-        var newNumber = numberInput.value.trim();
-        var newName = nameInput.value.trim();
-        if(!newNumber){ alert("Member number can't be empty."); return; }
-        if(!newName){ alert("Member name can't be empty."); return; }
-        var dup = data.members.some(function(x){return x.id!==m.id && x.number.toLowerCase()===newNumber.toLowerCase();});
-        if(dup){ alert("Member number \"" + newNumber + "\" is already used by someone else."); return; }
-        m.number = newNumber;
-        m.name = newName;
-        save();
-        renderMembers();
-        renderLog();
-      };
-      nameTd.appendChild(editSaveBtn);
-
-      var actionsTd = tr.children[3];
-      var toggleBtn = document.createElement("button");
-      toggleBtn.className = "small";
-      toggleBtn.textContent = m.active ? "Deactivate" : "Activate";
-      toggleBtn.onclick = function(){ m.active = !m.active; save(); renderMembers(); renderLog(); };
-      actionsTd.appendChild(toggleBtn);
-      if(!hasEntries){
-        var delBtn = document.createElement("button");
-        delBtn.className = "small";
-        delBtn.style.marginLeft="6px";
-        delBtn.textContent = "Delete";
-        delBtn.onclick = function(){
-          if(confirm("Delete member \"" + m.name + "\"? This cannot be undone.")){
-            data.members = data.members.filter(function(x){return x.id!==m.id;});
-            save(); renderMembers(); renderLog();
-          }
-        };
-        actionsTd.appendChild(delBtn);
-      }
-      tbody.appendChild(tr);
-    });
-  }
-
-  document.getElementById("btnAddMember").addEventListener("click", function(){
-    var numberInput = document.getElementById("newMemberNumber");
-    var nameInput = document.getElementById("newMemberName");
-    var number = numberInput.value.trim();
-    var name = nameInput.value.trim();
-    if(!number){ alert("Enter a member number."); return; }
-    if(!name){ alert("Enter a member name."); return; }
-    var dup = data.members.some(function(m){return m.number.toLowerCase()===number.toLowerCase();});
-    if(dup){ alert("Member number \"" + number + "\" is already in use."); return; }
-    data.members.push({id:uid(), number:number, name:name, active:true});
-    save();
-    numberInput.value = "";
-    nameInput.value = "";
-    renderMembers();
-    renderLog();
-  });
-
-  // ---------- CSV import (bulk add members) ----------
-  function parseCsv(text){
-    var rows = [];
-    var row = [];
-    var field = "";
-    var inQuotes = false;
-    for(var i=0;i<text.length;i++){
-      var c = text[i];
-      if(inQuotes){
-        if(c === '"'){
-          if(text[i+1] === '"'){ field += '"'; i++; }
-          else { inQuotes = false; }
-        } else {
-          field += c;
-        }
-      } else {
-        if(c === '"'){
-          inQuotes = true;
-        } else if(c === ','){
-          row.push(field); field = "";
-        } else if(c === '\r'){
-          // ignore - line break is handled on \n
-        } else if(c === '\n'){
-          row.push(field); field = "";
-          rows.push(row); row = [];
-        } else {
-          field += c;
-        }
-      }
-    }
-    if(field.length > 0 || row.length > 0){
-      row.push(field);
-      rows.push(row);
-    }
-    rows = rows.filter(function(r){ return r.some(function(c){ return c.trim() !== ""; }); });
-    return rows;
-  }
-
-  function looksNumeric(s){
-    s = (s||"").trim();
-    if(!s) return false;
-    return /^[0-9]+$/.test(s.replace(/[\s\-]/g,""));
-  }
-
-  function detectMemberColumns(rows){
-    var numberKeywords = ["number","num","acct","account","id","#","מספר"];
-    var nameKeywords = ["name","שם"];
-    var header = rows[0].map(function(c){ return (c||"").trim().toLowerCase(); });
-    var numberCol = -1, nameCol = -1;
-    header.forEach(function(h, idx){
-      if(numberCol===-1 && numberKeywords.some(function(k){ return h.indexOf(k)!==-1; })) numberCol = idx;
-      if(nameCol===-1 && nameKeywords.some(function(k){ return h.indexOf(k)!==-1; })) nameCol = idx;
-    });
-    var hasHeader = (numberCol!==-1 || nameCol!==-1);
-    var dataRows = hasHeader ? rows.slice(1) : rows.slice();
-
-    if(numberCol===-1 || nameCol===-1){
-      var col0Numeric = 0, col1Numeric = 0, total = 0;
-      dataRows.forEach(function(r){
-        if(r.length < 2) return;
-        total++;
-        if(looksNumeric(r[0])) col0Numeric++;
-        if(looksNumeric(r[1])) col1Numeric++;
-      });
-      if(total > 0 && col1Numeric > col0Numeric){
-        numberCol = 1; nameCol = 0;
-      } else {
-        numberCol = 0; nameCol = 1;
-      }
-    }
-    return { numberCol: numberCol, nameCol: nameCol, dataRows: dataRows };
-  }
-
-  document.getElementById("btnPreviewImport").addEventListener("click", function(){
-    var fileInput = document.getElementById("importMembersFile");
-    var file = fileInput.files[0];
-    if(!file){ alert("Choose a CSV file first."); return; }
-    var reader = new FileReader();
-    reader.onload = function(e){
-      try{
-        var rows = parseCsv(e.target.result);
-        if(rows.length===0){ alert("That file appears to be empty."); return; }
-        var detected = detectMemberColumns(rows);
-
-        var existingNumbers = {};
-        data.members.forEach(function(m){ existingNumbers[m.number.toLowerCase()] = true; });
-        var seenNumbers = {};
-
-        var parsed = detected.dataRows.map(function(r){
-          var number = (r[detected.numberCol]||"").trim();
-          var name = (r[detected.nameCol]||"").trim();
-          var status;
-          if(!number || !name){
-            status = "missing data - will be skipped";
-          } else if(existingNumbers[number.toLowerCase()]){
-            status = "already a member - will be skipped";
-          } else if(seenNumbers[number.toLowerCase()]){
-            status = "duplicate in file - will be skipped";
-          } else {
-            status = "ok";
-            seenNumbers[number.toLowerCase()] = true;
-          }
-          return { number: number, name: name, status: status };
-        });
-
-        renderImportPreview(parsed);
-      }catch(err){
-        alert("Could not read that file: " + err.message);
-      }
-    };
-    reader.readAsText(file, "UTF-8");
-  });
-
-  function renderImportPreview(parsed){
-    var box = document.getElementById("importPreviewBox");
-    var okCount = parsed.filter(function(p){ return p.status==="ok"; }).length;
-    var skipCount = parsed.length - okCount;
-    var html = '<p class="muted">Found ' + parsed.length + ' row(s): ' + okCount + ' ready to import, ' + skipCount + ' will be skipped.</p>';
-    html += '<table><thead><tr><th>Member #</th><th>Name</th><th>Status</th></tr></thead><tbody>';
-    parsed.slice(0,25).forEach(function(p){
-      html += '<tr><td>'+escapeHtml(p.number)+'</td><td>'+escapeHtml(p.name)+'</td><td>'+escapeHtml(p.status)+'</td></tr>';
-    });
-    html += '</tbody></table>';
-    if(parsed.length > 25){ html += '<p class="muted">...and ' + (parsed.length-25) + ' more row(s) not shown.</p>'; }
-    html += '<div class="row" style="margin-top:10px;">' +
-            '<button class="btn" id="btnConfirmImport">Import ' + okCount + ' Member' + (okCount===1?"":"s") + '</button>' +
-            '<button class="btn secondary" id="btnCancelImport">Cancel</button>' +
-            '</div>';
-    box.innerHTML = html;
-
-    document.getElementById("btnConfirmImport").addEventListener("click", function(){
-      var added = 0;
-      parsed.forEach(function(p){
-        if(p.status==="ok"){
-          data.members.push({id:uid(), number:p.number, name:p.name, active:true});
-          added++;
-        }
-      });
-      save();
-      renderMembers();
-      renderLog();
-      box.innerHTML = "";
-      document.getElementById("importMembersFile").value = "";
-      alert("Imported " + added + " new member" + (added===1?"":"s") + ".");
-    });
-
-    document.getElementById("btnCancelImport").addEventListener("click", function(){
-      box.innerHTML = "";
-      document.getElementById("importMembersFile").value = "";
-    });
-  }
-
-  // ================= MENU =================
-  function renderMenu(){
-    document.getElementById("currencySymbol").value = currency();
-    var tbody = document.querySelector("#menuTable tbody");
-    tbody.innerHTML = "";
-    data.items.slice().sort(function(a,b){
-      if(a.category!==b.category) return a.category.localeCompare(b.category);
-      return a.name.localeCompare(b.name);
-    }).forEach(function(it){
-      var hasEntries = data.entries.some(function(e){return e.itemId===it.id;});
-      var tr = document.createElement("tr");
-      tr.innerHTML =
-        '<td>'+escapeHtml(it.name)+'</td>'+
-        '<td>'+escapeHtml(it.category)+'</td>'+
-        '<td></td>'+
-        '<td></td>'+
-        '<td><span class="badge '+(it.active?'active':'inactive')+'">'+(it.active?'Active':'Inactive')+'</span></td>'+
-        '<td></td>';
-      var priceTd = tr.children[2];
-      var priceInput = document.createElement("input");
-      priceInput.type="number"; priceInput.min="0"; priceInput.step="0.5";
-      priceInput.style.width="80px";
-      priceInput.value = it.price;
-      var saveBtn = document.createElement("button");
-      saveBtn.className="small"; saveBtn.style.marginLeft="6px"; saveBtn.textContent="Save";
-      saveBtn.onclick = function(){
-        var val = parseFloat(priceInput.value);
-        if(isNaN(val) || val<0){ alert("Enter a valid price."); return; }
-        it.price = val; save(); renderLog();
-        saveBtn.textContent="Saved"; setTimeout(function(){saveBtn.textContent="Save";},900);
-      };
-      priceTd.appendChild(priceInput); priceTd.appendChild(saveBtn);
-
-      var stockTd = tr.children[3];
-      var stockInput = document.createElement("input");
-      stockInput.type="number"; stockInput.step="1";
-      stockInput.style.width="70px";
-      stockInput.value = it.stock;
-      if(it.stock<=0) stockTd.style.color = "var(--danger-dark)";
-      var stockSaveBtn = document.createElement("button");
-      stockSaveBtn.className="small"; stockSaveBtn.style.marginLeft="6px"; stockSaveBtn.textContent="Save";
-      stockSaveBtn.onclick = function(){
-        var val = parseInt(stockInput.value, 10);
-        if(isNaN(val)){ alert("Enter a valid stock count."); return; }
-        it.stock = val; save(); renderMenu(); renderLog();
-      };
-      stockTd.appendChild(stockInput); stockTd.appendChild(stockSaveBtn);
-
-      var actionsTd = tr.children[5];
-      var toggleBtn = document.createElement("button");
-      toggleBtn.className="small";
-      toggleBtn.textContent = it.active ? "Deactivate" : "Activate";
-      toggleBtn.onclick = function(){ it.active=!it.active; save(); renderMenu(); renderLog(); };
-      actionsTd.appendChild(toggleBtn);
-      if(!hasEntries){
-        var delBtn = document.createElement("button");
-        delBtn.className="small"; delBtn.style.marginLeft="6px"; delBtn.textContent="Delete";
-        delBtn.onclick = function(){
-          if(confirm("Delete item \"" + it.name + "\"?")){
-            data.items = data.items.filter(function(x){return x.id!==it.id;});
-            save(); renderMenu(); renderLog();
-          }
-        };
-        actionsTd.appendChild(delBtn);
-      }
-      tbody.appendChild(tr);
-    });
-  }
-
-  document.getElementById("btnAddItem").addEventListener("click", function(){
-    var name = document.getElementById("newItemName").value.trim();
-    var category = document.getElementById("newItemCategory").value;
-    var price = parseFloat(document.getElementById("newItemPrice").value);
-    var stockRaw = document.getElementById("newItemStock").value;
-    var stock = stockRaw === "" ? 0 : parseInt(stockRaw, 10);
-    if(!name){ alert("Enter an item name."); return; }
-    if(isNaN(price) || price<0){ alert("Enter a valid price."); return; }
-    if(isNaN(stock) || stock<0){ alert("Enter a valid starting stock (0 or more)."); return; }
-    data.items.push({id:uid(), name:name, category:category, price:price, stock:stock, active:true});
-    save();
-    document.getElementById("newItemName").value="";
-    document.getElementById("newItemPrice").value="";
-    document.getElementById("newItemStock").value="0";
-    renderMenu();
-    renderLog();
-  });
-
-  document.getElementById("btnSaveCurrency").addEventListener("click", function(){
-    var sym = document.getElementById("currencySymbol").value.trim();
-    data.settings.currency = sym;
-    save();
-    renderLog(); renderMenu();
-  });
-
-  // ================= LOG =================
-  function matchesQuery(text, query){
-    query = (query||"").trim().toLowerCase();
-    if(!query) return true;
-    return String(text).toLowerCase().indexOf(query) !== -1;
-  }
-
-  function fillLogDropdowns(){
-    var memberQuery = document.getElementById("searchMember").value;
-    var itemQuery = document.getElementById("searchItem").value;
-
-    var memberSel = document.getElementById("logMember");
-    var prevMember = memberSel.value;
-    memberSel.innerHTML = "";
-    var filteredMembers = data.members.filter(function(m){return m.active && matchesQuery(m.number + " " + m.name, memberQuery);})
-      .sort(function(a,b){return (a.number||"").localeCompare(b.number||"", undefined, {numeric:true});});
-    if(filteredMembers.length===0){
-      var noneOpt = document.createElement("option");
-      noneOpt.value = ""; noneOpt.textContent = "No matching members";
-      memberSel.appendChild(noneOpt);
-    } else {
-      filteredMembers.forEach(function(m){
-        var opt = document.createElement("option");
-        opt.value = m.id; opt.textContent = m.number + " - " + m.name;
-        memberSel.appendChild(opt);
-      });
-    }
-    if(prevMember) memberSel.value = prevMember;
-
-    var itemSel = document.getElementById("logItem");
-    var prevItem = itemSel.value;
-    itemSel.innerHTML = "";
-    var anyItems = false;
-    ["Drink","Food","Other"].forEach(function(cat){
-      var group = data.items.filter(function(it){return it.active && it.category===cat && matchesQuery(it.name, itemQuery);});
-      if(group.length===0) return;
-      anyItems = true;
-      var optgroup = document.createElement("optgroup");
-      optgroup.label = cat;
-      group.sort(function(a,b){return a.name.localeCompare(b.name);}).forEach(function(it){
-        var opt = document.createElement("option");
-        opt.value = it.id;
-        var stockLabel = it.stock<=0 ? ", OUT OF STOCK" : ", Stock: " + it.stock;
-        opt.textContent = it.name + " (" + currency() + money(it.price) + stockLabel + ")";
-        optgroup.appendChild(opt);
-      });
-      itemSel.appendChild(optgroup);
-    });
-    if(!anyItems){
-      var noneItemOpt = document.createElement("option");
-      noneItemOpt.value = ""; noneItemOpt.textContent = "No matching items";
-      itemSel.appendChild(noneItemOpt);
-    }
-    if(prevItem) itemSel.value = prevItem;
-  }
-
-  document.getElementById("searchMember").addEventListener("input", fillLogDropdowns);
-  document.getElementById("searchItem").addEventListener("input", fillLogDropdowns);
-
-  function renderLog(){
-    fillLogDropdowns();
-    var hint = document.getElementById("logHint");
-    if(data.members.filter(function(m){return m.active;}).length===0 || data.items.filter(function(it){return it.active;}).length===0){
-      hint.style.display="block";
-      hint.textContent = "Add at least one member (Members tab) and one menu item (Menu & Prices tab) before logging drinks.";
-    } else {
-      hint.style.display="none";
-    }
-
-    var dateInput = document.getElementById("logDate");
-    if(!dateInput.value) dateInput.value = todayStr();
-    var selDate = dateInput.value;
-
-    var tbody = document.querySelector("#logTable tbody");
-    tbody.innerHTML = "";
-    var dayTotal = 0;
-    data.entries.filter(function(e){return e.date===selDate;})
-      .sort(function(a,b){return a.ts-b.ts;})
-      .forEach(function(e){
-        var lineTotal = e.unitPrice * e.qty;
-        dayTotal += lineTotal;
-        var member = data.members.find(function(m){return m.id===e.memberId;});
-        var tr = document.createElement("tr");
-        tr.innerHTML =
-          '<td>'+new Date(e.ts).toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"})+'</td>'+
-          '<td>'+escapeHtml(member?member.number:"")+'</td>'+
-          '<td>'+escapeHtml(member?member.name:"(removed member)")+'</td>'+
-          '<td>'+escapeHtml(e.itemName)+'</td>'+
-          '<td>'+e.qty+'</td>'+
-          '<td>'+currency()+money(e.unitPrice)+'</td>'+
-          '<td>'+currency()+money(lineTotal)+'</td>'+
-          '<td></td>';
-        var delBtn = document.createElement("button");
-        delBtn.className="small"; delBtn.textContent="Delete";
-        delBtn.onclick = function(){
-          if(confirm("Remove this entry? (Stock will be added back.)")){
-            var relatedItem = data.items.find(function(x){return x.id===e.itemId;});
-            if(relatedItem) relatedItem.stock += e.qty;
-            data.entries = data.entries.filter(function(x){return x.id!==e.id;});
-            save(); renderLog();
-          }
-        };
-        tr.children[7].appendChild(delBtn);
-        tbody.appendChild(tr);
-      });
-    document.getElementById("logDayTotal").textContent = currency() + money(dayTotal);
-  }
-
-  document.getElementById("logDate").addEventListener("change", renderLog);
-
-  document.getElementById("btnAddEntry").addEventListener("click", function(){
-    var date = document.getElementById("logDate").value;
-    var memberId = document.getElementById("logMember").value;
-    var itemId = document.getElementById("logItem").value;
-    var qty = parseInt(document.getElementById("logQty").value, 10);
-    if(!date){ alert("Pick a date."); return; }
-    if(!memberId){ alert("Select a member (clear the search box if none show up)."); return; }
-    if(!itemId){ alert("Select an item (clear the search box if none show up)."); return; }
-    if(isNaN(qty) || qty<1){ alert("Enter a valid quantity."); return; }
-    var item = data.items.find(function(it){return it.id===itemId;});
-    if(item.stock - qty < 0){
-      var proceed = confirm("Only " + item.stock + " \"" + item.name + "\" left in stock. Log this sale anyway?");
-      if(!proceed) return;
-    }
-    item.stock -= qty;
-    data.entries.push({
-      id: uid(),
-      memberId: memberId,
-      itemId: itemId,
-      itemName: item.name,
-      category: item.category,
-      unitPrice: item.price,
-      qty: qty,
-      date: date,
-      ts: Date.now()
-    });
-    save();
-    document.getElementById("logQty").value = "1";
-    renderLog();
-    renderMenu();
-  });
-
-  function todayStr(){
-    var d = new Date();
-    return d.getFullYear() + "-" + pad(d.getMonth()+1) + "-" + pad(d.getDate());
-  }
-  function pad(n){ return n<10 ? "0"+n : ""+n; }
-  function escapeHtml(s){
-    return String(s).replace(/[&<>"']/g, function(c){
-      return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];
-    });
-  }
-
-  // ================= REPORTS =================
-  function monthEntries(monthStr){
-    return data.entries.filter(function(e){ return e.date && e.date.slice(0,7)===monthStr; });
-  }
-
-  function buildSummary(monthStr){
-    var entries = monthEntries(monthStr);
-    var byMember = {};
-    entries.forEach(function(e){
-      if(!byMember[e.memberId]) byMember[e.memberId] = {items:0, total:0};
-      byMember[e.memberId].items += e.qty;
-      byMember[e.memberId].total += e.unitPrice * e.qty;
-    });
-    var rows = Object.keys(byMember).map(function(mid){
-      var member = data.members.find(function(m){return m.id===mid;});
-      return {
-        memberId: mid,
-        number: member ? member.number : "",
-        name: member ? member.name : "(removed member)",
-        items: byMember[mid].items,
-        total: byMember[mid].total
-      };
-    });
-    rows.sort(function(a,b){return (a.number||"").localeCompare(b.number||"", undefined, {numeric:true});});
-    return rows;
-  }
-
-  function renderReport(){
-    var monthStr = document.getElementById("reportMonth").value;
-    var tbody = document.querySelector("#reportTable tbody");
-    tbody.innerHTML = "";
-    if(!monthStr){ return; }
-    var rows = buildSummary(monthStr);
-    var grand = 0;
-    rows.forEach(function(r){
-      grand += r.total;
-      var tr = document.createElement("tr");
-      tr.innerHTML =
-        '<td>'+escapeHtml(r.number)+'</td>'+
-        '<td>'+escapeHtml(r.name)+'</td>'+
-        '<td>'+r.items+'</td>'+
-        '<td>'+currency()+money(r.total)+'</td>'+
-        '<td><button class="small" data-mid="'+r.memberId+'">Details</button></td>';
-      tbody.appendChild(tr);
-    });
-    if(rows.length===0){
-      tbody.innerHTML = '<tr><td colspan="5" class="muted">No entries logged for this month yet.</td></tr>';
-    }
-    document.getElementById("reportGrandTotal").textContent = currency() + money(grand);
-    document.getElementById("reportDetailBox").innerHTML = "";
-
-    tbody.querySelectorAll("button[data-mid]").forEach(function(btn){
-      btn.addEventListener("click", function(){
-        showMemberDetail(monthStr, btn.dataset.mid);
-      });
-    });
-  }
-
-  function showMemberDetail(monthStr, memberId){
-    var entries = monthEntries(monthStr).filter(function(e){return e.memberId===memberId;})
-      .sort(function(a,b){return a.ts-b.ts;});
-    var member = data.members.find(function(m){return m.id===memberId;});
-    var box = document.getElementById("reportDetailBox");
-    var label = member ? (member.number + " - " + member.name) : "(removed member)";
-    var html = '<h3 style="margin-top:20px;">'+escapeHtml(label)+' &mdash; line items</h3>';
-    html += '<table><thead><tr><th>Date</th><th>Item</th><th>Qty</th><th>Unit Price</th><th>Line Total</th></tr></thead><tbody>';
-    entries.forEach(function(e){
-      html += '<tr><td>'+e.date+'</td><td>'+escapeHtml(e.itemName)+'</td><td>'+e.qty+'</td><td>'+currency()+money(e.unitPrice)+'</td><td>'+currency()+money(e.unitPrice*e.qty)+'</td></tr>';
-    });
-    html += '</tbody></table>';
-    box.innerHTML = html;
-  }
-
-  document.getElementById("btnShowReport").addEventListener("click", renderReport);
-
-  document.getElementById("btnExportSummary").addEventListener("click", function(){
-    var monthStr = document.getElementById("reportMonth").value;
-    if(!monthStr){ alert("Pick a month first."); return; }
-    var rows = buildSummary(monthStr);
-    var out = [];
-    out.push(["Stable Pub Geva - Monthly Tab Summary - " + monthStr]);
-    out.push([]);
-    out.push(["Member #","Member","Total Items","Total Due (" + currency() + ")"]);
-    var grand = 0;
-    rows.forEach(function(r){
-      grand += r.total;
-      out.push([r.number, r.name, r.items, money(r.total)]);
-    });
-    out.push([]);
-    out.push(["","Grand Total","", money(grand)]);
-    downloadCsv("stable-pub-summary-" + monthStr + ".csv", out);
-  });
-
-  document.getElementById("btnExportDetailed").addEventListener("click", function(){
-    var monthStr = document.getElementById("reportMonth").value;
-    if(!monthStr){ alert("Pick a month first."); return; }
-    var entries = monthEntries(monthStr).slice().sort(function(a,b){
-      if(a.date!==b.date) return a.date.localeCompare(b.date);
-      return a.ts-b.ts;
-    });
-    var out = [];
-    out.push(["Stable Pub Geva - Monthly Tab Detail - " + monthStr]);
-    out.push([]);
-    out.push(["Date","Member #","Member","Item","Category","Qty","Unit Price","Line Total"]);
-    entries.forEach(function(e){
-      var member = data.members.find(function(m){return m.id===e.memberId;});
-      out.push([e.date, member?member.number:"", member?member.name:"(removed member)", e.itemName, e.category, e.qty, money(e.unitPrice), money(e.unitPrice*e.qty)]);
-    });
-    downloadCsv("stable-pub-detailed-" + monthStr + ".csv", out);
-  });
-
-  // ================= BACKUP =================
-  var BACKUP_REMINDER_DAYS = 30;
-
-  function daysSince(dateStr){
-    if(!dateStr) return Infinity;
-    var then = new Date(dateStr + "T00:00:00");
-    var now = new Date(todayStr() + "T00:00:00");
-    return Math.round((now - then) / 86400000);
-  }
-
-  function doBackup(){
-    var stamp = todayStr();
-    downloadJson("stable-pub-backup-" + stamp + ".json", data);
-    data.settings.lastBackupDate = stamp;
-    save();
-    renderBackupStatus();
-  }
-
-  function renderBackupStatus(){
-    var last = data.settings.lastBackupDate;
-    var days = daysSince(last);
-    var reminder = document.getElementById("backupReminder");
-    var reminderText = document.getElementById("backupReminderText");
-    var infoLine = document.getElementById("lastBackupInfo");
-
-    if(!last){
-      infoLine.textContent = "You haven't downloaded a backup yet.";
-    } else {
-      infoLine.textContent = "Last backup: " + last + " (" + days + " day" + (days===1?"":"s") + " ago).";
-    }
-
-    if(days >= BACKUP_REMINDER_DAYS){
-      reminder.style.display = "block";
-      reminderText.textContent = !last
-        ? "You haven't backed up yet. Download a backup and save it to your OneDrive/Google Drive folder."
-        : "It's been " + days + " days since your last backup. Download one now and save it to your OneDrive/Google Drive folder.";
-    } else {
-      reminder.style.display = "none";
-    }
-  }
-
-  document.getElementById("btnBackup").addEventListener("click", doBackup);
-  document.getElementById("btnBackupFromReminder").addEventListener("click", doBackup);
-
-  document.getElementById("btnRestore").addEventListener("click", function(){
-    var fileInput = document.getElementById("restoreFile");
-    var file = fileInput.files[0];
-    if(!file){ alert("Choose a backup .json file first."); return; }
-    var reader = new FileReader();
-    reader.onload = function(e){
-      try{
-        var parsed = JSON.parse(e.target.result);
-        if(!parsed.members || !parsed.items || !parsed.entries){
-          alert("This doesn't look like a valid backup file.");
-          return;
-        }
-        if(confirm("This will replace all current data with the backup. Continue?")){
-          data = parsed;
-          if(!data.settings) data.settings = { currency: "₪" };
-          save();
-          renderMembers(); renderMenu(); renderLog();
-          renderBackupStatus();
-          document.getElementById("reportTable").querySelector("tbody").innerHTML = "";
-          alert("Backup restored.");
-        }
-      }catch(err){
-        alert("Could not read that file: " + err.message);
-      }
-    };
-    reader.readAsText(file, "UTF-8");
-  });
-
-  // ================= INIT =================
-  document.getElementById("logDate").value = todayStr();
-  var monthInput = document.getElementById("reportMonth");
-  var now = new Date();
-  monthInput.value = now.getFullYear() + "-" + pad(now.getMonth()+1);
-
-  renderMembers();
-  renderMenu();
-  renderLog();
-  renderBackupStatus();
-})();
-</script>
+<script src="translations.js"></script>
+<script src="app.js"></script>
 </body>
 </html>

@@ -1,0 +1,10 @@
+# Never publish real customer data or credentials to GitHub.
+# Only relevant on YOUR (the maintainer's) computer, when you push updates -
+# customers never touch this file.
+
+App/current-data.json
+App/stable-pub-backup-*.json
+Monthly Email Setup/email-config.txt
+Monthly Email Setup/Engine/SendMonthlyReport.log
+Check for Updates/update-config.txt
+Check for Updates/Engine/UpdateLog.txt
