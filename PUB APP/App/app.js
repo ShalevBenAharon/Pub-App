@@ -609,13 +609,59 @@
       var hasEntries = data.entries.some(function(e){return e.itemId===it.id;});
       var tr = document.createElement("tr");
       tr.innerHTML =
+        '<td></td>'+
         '<td>'+escapeHtml(it.name)+'</td>'+
         '<td>'+escapeHtml(it.category)+'</td>'+
         '<td></td>'+
         '<td></td>'+
         '<td><span class="badge '+(it.active?'active':'inactive')+'">'+(it.active?t('badge_active'):t('badge_inactive'))+'</span></td>'+
         '<td></td>';
-      var priceTd = tr.children[2];
+
+      var imageTd = tr.children[0];
+      if(it.image){
+        var thumb = document.createElement("img");
+        thumb.className = "item-thumb";
+        thumb.src = "images/" + it.image + "?v=" + (it.imageVersion||0);
+        thumb.alt = it.name;
+        imageTd.appendChild(thumb);
+      } else {
+        var noImg = document.createElement("span");
+        noImg.className = "muted";
+        noImg.textContent = "—";
+        imageTd.appendChild(noImg);
+      }
+      var imgInput = document.createElement("input");
+      imgInput.type = "file"; imgInput.accept = "image/*";
+      imgInput.style.display = "block"; imgInput.style.marginTop = "4px"; imgInput.style.fontSize = "0.75em"; imgInput.style.width = "90px";
+      imgInput.onchange = function(){
+        var file = imgInput.files && imgInput.files[0];
+        if(!file) return;
+        if(file.size > 3*1024*1024){ alert(t("alert_image_too_large")); imgInput.value=""; return; }
+        var fr = new FileReader();
+        fr.onload = function(){
+          var dataUrl = fr.result;
+          var base64 = dataUrl.split(",")[1];
+          fetch("/api/upload-image", {
+            method: "POST",
+            headers: {"Content-Type": "application/json; charset=utf-8"},
+            body: JSON.stringify({itemId: it.id, filename: file.name, dataBase64: base64})
+          }).then(function(res){ return res.json(); }).then(function(resJson){
+            if(resJson && resJson.ok){
+              it.image = resJson.filename;
+              it.imageVersion = (it.imageVersion||0) + 1;
+              save();
+              renderMenu();
+              updateLogItemPreview();
+            } else {
+              alert(t("alert_image_upload_failed"));
+            }
+          }).catch(function(){ alert(t("alert_image_upload_failed")); });
+        };
+        fr.readAsDataURL(file);
+      };
+      imageTd.appendChild(imgInput);
+
+      var priceTd = tr.children[3];
       var priceInput = document.createElement("input");
       priceInput.type="number"; priceInput.min="0"; priceInput.step="0.5";
       priceInput.style.width="80px";
@@ -630,7 +676,7 @@
       };
       priceTd.appendChild(priceInput); priceTd.appendChild(saveBtn);
 
-      var stockTd = tr.children[3];
+      var stockTd = tr.children[4];
       var stockInput = document.createElement("input");
       stockInput.type="number"; stockInput.step="1";
       stockInput.style.width="70px";
@@ -645,7 +691,7 @@
       };
       stockTd.appendChild(stockInput); stockTd.appendChild(stockSaveBtn);
 
-      var actionsTd = tr.children[5];
+      var actionsTd = tr.children[6];
       var toggleBtn = document.createElement("button");
       toggleBtn.className="small";
       toggleBtn.textContent = it.active ? t("btn_deactivate") : t("btn_activate");
@@ -746,10 +792,26 @@
       itemSel.appendChild(noneItemOpt);
     }
     if(prevItem) itemSel.value = prevItem;
+    updateLogItemPreview();
+  }
+
+  function updateLogItemPreview(){
+    var itemSel = document.getElementById("logItem");
+    var preview = document.getElementById("logItemPreview");
+    var it = data.items.find(function(x){return x.id===itemSel.value;});
+    if(it && it.image){
+      preview.src = "images/" + it.image + "?v=" + (it.imageVersion||0);
+      preview.alt = it.name;
+      preview.style.display = "block";
+    } else {
+      preview.style.display = "none";
+      preview.src = "";
+    }
   }
 
   document.getElementById("searchMember").addEventListener("input", fillLogDropdowns);
   document.getElementById("searchItem").addEventListener("input", fillLogDropdowns);
+  document.getElementById("logItem").addEventListener("change", updateLogItemPreview);
 
   function renderLog(){
     fillLogDropdowns();

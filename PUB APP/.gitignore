@@ -4,6 +4,7 @@
 
 App/current-data.json
 App/stable-pub-backup-*.json
+App/images/
 Monthly Email Setup/email-config.txt
 Monthly Email Setup/Engine/SendMonthlyReport.log
 Check for Updates/Engine/UpdateLog.txt

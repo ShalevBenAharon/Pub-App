@@ -14,6 +14,13 @@ if (-not $htmlFile) {
     exit
 }
 
+# Folder where uploaded item photos live. Created on first run - never
+# touched by the auto-update mechanism, since it's the customer's own data.
+$imagesDir = Join-Path $rootFull "images"
+if (-not (Test-Path $imagesDir)) {
+    New-Item -ItemType Directory -Path $imagesDir | Out-Null
+}
+
 $prefix = "http://localhost:$port/"
 # Point at the bare root (no filename in the URL) so a non-English
 # filename never has to round-trip through URL encoding.
@@ -44,7 +51,14 @@ $mimeMap = @{
     ".json" = "application/json"
     ".svg"  = "image/svg+xml"
     ".txt"  = "text/plain"
+    ".jpg"  = "image/jpeg"
+    ".jpeg" = "image/jpeg"
+    ".gif"  = "image/gif"
+    ".webp" = "image/webp"
 }
+
+# Only these extensions are ever written to disk by the upload endpoint below.
+$allowedImageExt = @(".jpg", ".jpeg", ".png", ".gif", ".webp")
 
 Write-Host ""
 Write-Host "Pub Tracker is running at $url"
@@ -84,6 +98,53 @@ while ($listener.IsListening) {
             $response.ContentType = "text/plain"
             $response.ContentLength64 = $okBytes.Length
             $response.OutputStream.Write($okBytes, 0, $okBytes.Length)
+            continue
+        }
+
+        if ($request.HttpMethod -eq "POST" -and $request.Url.LocalPath -eq "/api/upload-image") {
+            # The app sends { itemId, filename, dataBase64 } as JSON whenever
+            # someone uploads a photo for a menu item. Saved to App/images/
+            # as "<itemId>.<ext>" - never part of current-data.json, and
+            # never synced by the auto-update mechanism.
+            $reader = New-Object System.IO.StreamReader($request.InputStream, [System.Text.Encoding]::UTF8)
+            $body = $reader.ReadToEnd()
+            $reader.Close()
+
+            $respBytes = $null
+            try {
+                $payload = $body | ConvertFrom-Json
+                $itemId = [string]$payload.itemId
+                $origName = [string]$payload.filename
+
+                if ($itemId -notmatch '^[a-z0-9]+$') { throw "Invalid item id." }
+
+                $ext = [System.IO.Path]::GetExtension($origName).ToLower()
+                if ($allowedImageExt -notcontains $ext) { $ext = ".png" }
+
+                $bytes = [Convert]::FromBase64String([string]$payload.dataBase64)
+
+                # Remove any previous photo for this item under a different extension.
+                Get-ChildItem -Path $imagesDir -Filter ("$itemId.*") -ErrorAction SilentlyContinue |
+                    Remove-Item -Force -ErrorAction SilentlyContinue
+
+                $destName = "$itemId$ext"
+                $destPath = Join-Path $imagesDir $destName
+                [System.IO.File]::WriteAllBytes($destPath, $bytes)
+
+                $okJson = '{"ok":true,"filename":"' + $destName + '"}'
+                $respBytes = [System.Text.Encoding]::UTF8.GetBytes($okJson)
+                $response.StatusCode = 200
+            }
+            catch {
+                Write-Host "ERROR saving uploaded image: $($_.Exception.Message)"
+                $errJson = '{"ok":false,"error":"' + ($_.Exception.Message -replace '"','''') + '"}'
+                $respBytes = [System.Text.Encoding]::UTF8.GetBytes($errJson)
+                $response.StatusCode = 400
+            }
+
+            $response.ContentType = "application/json; charset=utf-8"
+            $response.ContentLength64 = $respBytes.Length
+            $response.OutputStream.Write($respBytes, 0, $respBytes.Length)
             continue
         }
 

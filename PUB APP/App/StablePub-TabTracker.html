@@ -77,6 +77,9 @@
           <select id="logItem"></select>
         </div>
         <div class="field">
+          <img id="logItemPreview" class="item-thumb" style="display:none;width:48px;height:48px;">
+        </div>
+        <div class="field">
           <label data-i18n="label_qty">Qty</label>
           <input type="number" id="logQty" value="1" min="1" step="1" style="width:70px;">
         </div>
@@ -185,6 +188,7 @@
       </div>
       <table id="menuTable">
         <thead><tr>
+          <th data-i18n="th_image">Image</th>
           <th data-i18n="th_name">Name</th>
           <th data-i18n="th_category">Category</th>
           <th data-i18n="th_price">Price</th>

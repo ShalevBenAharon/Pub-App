@@ -233,3 +233,12 @@ footer{
   font-size:.8em;
 }
 ::placeholder{color:#b0a48c;}
+.item-thumb{
+  width:40px;
+  height:40px;
+  object-fit:cover;
+  border-radius:5px;
+  border:1px solid var(--border);
+  background:#fff;
+  display:block;
+}

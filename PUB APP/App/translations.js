@@ -86,6 +86,9 @@ window.STABLE_PUB_I18N = {
 
     all_members_title: "All Members",
     th_status: "Status",
+    th_image: "Image",
+    alert_image_too_large: "That image is too large. Please choose a photo under 3MB.",
+    alert_image_upload_failed: "Couldn't upload the image. Make sure Pub Tracker is running via Start Pub Tracker.bat and try again.",
 
     menu_add_title: "Add Beverage / Food Item",
     opt_drink: "Drink",
@@ -275,6 +278,9 @@ window.STABLE_PUB_I18N = {
 
     all_members_title: "כל החברים",
     th_status: "סטטוס",
+    th_image: "תמונה",
+    alert_image_too_large: "התמונה גדולה מדי. נא לבחור תמונה עד 3MB.",
+    alert_image_upload_failed: "העלאת התמונה נכשלה. ודאו שהאפליקציה פועלת דרך Start Pub Tracker.bat ונסו שוב.",
 
     menu_add_title: "הוספת משקה / מנה",
     opt_drink: "משקה",
