@@ -82,6 +82,22 @@ Write-Log "Entries found for month: $($monthEntries.Count)"
 $members = @{}
 foreach ($m in $data.members) { $members[$m.id] = $m }
 
+# ---- Extras (toppings/add-ons) helpers ----
+# Each entry may carry an "extras" array of {name, price} snapshotted at the
+# time it was logged, from optional add-ons defined on the menu item.
+function Get-EntryExtrasTotal($e) {
+    if (-not $e.extras -or $e.extras.Count -eq 0) { return 0.0 }
+    return (($e.extras | Measure-Object -Property price -Sum).Sum)
+}
+function Get-EntryLineTotal($e) {
+    return $e.qty * ($e.unitPrice + (Get-EntryExtrasTotal $e))
+}
+function Get-EntryItemLabel($e) {
+    if (-not $e.extras -or $e.extras.Count -eq 0) { return $e.itemName }
+    $names = ($e.extras | ForEach-Object { $_.name }) -join ", "
+    return "$($e.itemName) (+$names)"
+}
+
 # ---- Build per-member summary ----
 $byMember = @{}
 foreach ($e in $monthEntries) {
@@ -89,7 +105,7 @@ foreach ($e in $monthEntries) {
         $byMember[$e.memberId] = [PSCustomObject]@{ Items = 0; Total = 0.0 }
     }
     $byMember[$e.memberId].Items += $e.qty
-    $byMember[$e.memberId].Total += ($e.unitPrice * $e.qty)
+    $byMember[$e.memberId].Total += (Get-EntryLineTotal $e)
 }
 
 $summaryRows = @()
@@ -151,8 +167,8 @@ foreach ($e in $sortedEntries) {
     $member = $members[$e.memberId]
     $number = if ($member) { $member.number } else { "" }
     $name = if ($member) { $member.name } else { "(removed member)" }
-    $lineTotal = [math]::Round(($e.unitPrice * $e.qty), 2)
-    $detailLines.Add((Csv-Row @($e.date, $number, $name, $e.itemName, $e.category, $e.qty, ("{0:N2}" -f $e.unitPrice), ("{0:N2}" -f $lineTotal))))
+    $lineTotal = [math]::Round((Get-EntryLineTotal $e), 2)
+    $detailLines.Add((Csv-Row @($e.date, $number, $name, (Get-EntryItemLabel $e), $e.category, $e.qty, ("{0:N2}" -f $e.unitPrice), ("{0:N2}" -f $lineTotal))))
 }
 
 $detailPath = Join-Path $env:TEMP "stable-pub-detailed-$targetMonth.csv"

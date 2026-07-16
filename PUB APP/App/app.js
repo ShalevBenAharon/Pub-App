@@ -267,7 +267,10 @@
       if(!parsed.users) parsed.users = [];
       // migrate older data that predates member numbers / stock
       parsed.members.forEach(function(m){ if(m.number===undefined) m.number = ""; });
-      parsed.items.forEach(function(it){ if(it.stock===undefined) it.stock = 0; });
+      parsed.items.forEach(function(it){
+        if(it.stock===undefined) it.stock = 0;
+        if(it.extras===undefined) it.extras = [];
+      });
       // migrate staff accounts that predate roles - default to "staff",
       // but make sure at least one active Admin exists so nobody gets
       // locked out of staff management.
@@ -614,6 +617,7 @@
         '<td>'+escapeHtml(it.category)+'</td>'+
         '<td></td>'+
         '<td></td>'+
+        '<td></td>'+
         '<td><span class="badge '+(it.active?'active':'inactive')+'">'+(it.active?t('badge_active'):t('badge_inactive'))+'</span></td>'+
         '<td></td>';
 
@@ -691,7 +695,48 @@
       };
       stockTd.appendChild(stockInput); stockTd.appendChild(stockSaveBtn);
 
-      var actionsTd = tr.children[6];
+      var extrasTd = tr.children[5];
+      if(!it.extras) it.extras = [];
+      var extrasList = document.createElement("div");
+      extrasList.className = "extras-chip-list";
+      it.extras.forEach(function(ex, idx){
+        var chip = document.createElement("span");
+        chip.className = "extra-chip";
+        chip.textContent = ex.name + " (+" + currency() + money(ex.price) + ")";
+        var rmBtn = document.createElement("button");
+        rmBtn.type = "button"; rmBtn.className = "extra-chip-remove"; rmBtn.textContent = "×";
+        rmBtn.onclick = function(){
+          it.extras.splice(idx, 1);
+          save(); renderMenu(); updateLogItemExtras();
+        };
+        chip.appendChild(rmBtn);
+        extrasList.appendChild(chip);
+      });
+      extrasTd.appendChild(extrasList);
+
+      var extraForm = document.createElement("div");
+      extraForm.className = "extra-add-form";
+      var exNameInput = document.createElement("input");
+      exNameInput.type = "text"; exNameInput.placeholder = t("placeholder_extra_name");
+      var exPriceInput = document.createElement("input");
+      exPriceInput.type = "number"; exPriceInput.min = "0"; exPriceInput.step = "0.5";
+      exPriceInput.placeholder = t("placeholder_extra_price");
+      var exAddBtn = document.createElement("button");
+      exAddBtn.type = "button"; exAddBtn.className = "small"; exAddBtn.textContent = t("btn_add_extra");
+      exAddBtn.onclick = function(){
+        var exName = exNameInput.value.trim();
+        var exPrice = parseFloat(exPriceInput.value);
+        if(!exName){ alert(t("alert_enter_extra_name")); return; }
+        if(isNaN(exPrice) || exPrice<0){ alert(t("alert_enter_valid_price")); return; }
+        it.extras.push({id: uid(), name: exName, price: exPrice});
+        save(); renderMenu(); updateLogItemExtras();
+      };
+      extraForm.appendChild(exNameInput);
+      extraForm.appendChild(exPriceInput);
+      extraForm.appendChild(exAddBtn);
+      extrasTd.appendChild(extraForm);
+
+      var actionsTd = tr.children[7];
       var toggleBtn = document.createElement("button");
       toggleBtn.className="small";
       toggleBtn.textContent = it.active ? t("btn_deactivate") : t("btn_activate");
@@ -721,7 +766,7 @@
     if(!name){ alert(t("alert_enter_item_name")); return; }
     if(isNaN(price) || price<0){ alert(t("alert_enter_valid_price")); return; }
     if(isNaN(stock) || stock<0){ alert(t("alert_enter_valid_starting_stock")); return; }
-    data.items.push({id:uid(), name:name, category:category, price:price, stock:stock, active:true});
+    data.items.push({id:uid(), name:name, category:category, price:price, stock:stock, active:true, extras: []});
     save();
     document.getElementById("newItemName").value="";
     document.getElementById("newItemPrice").value="";
@@ -793,6 +838,7 @@
     }
     if(prevItem) itemSel.value = prevItem;
     updateLogItemPreview();
+    updateLogItemExtras();
   }
 
   function updateLogItemPreview(){
@@ -809,9 +855,59 @@
     }
   }
 
+  function updateLogItemExtras(){
+    var itemSel = document.getElementById("logItem");
+    var field = document.getElementById("logExtrasField");
+    var box = document.getElementById("logExtrasBox");
+    box.innerHTML = "";
+    var it = data.items.find(function(x){return x.id===itemSel.value;});
+    var extras = (it && it.extras) ? it.extras : [];
+    if(extras.length===0){
+      field.style.display = "none";
+    } else {
+      field.style.display = "";
+      extras.forEach(function(ex){
+        var label = document.createElement("label");
+        label.className = "extra-pill";
+        var cb = document.createElement("input");
+        cb.type = "checkbox"; cb.value = ex.id;
+        label.appendChild(cb);
+        label.appendChild(document.createTextNode(" " + ex.name + " (+" + currency() + money(ex.price) + ")"));
+        box.appendChild(label);
+      });
+    }
+    updateLogPriceSummary();
+  }
+
+  function updateLogPriceSummary(){
+    var itemSel = document.getElementById("logItem");
+    var summary = document.getElementById("logPriceSummary");
+    var it = data.items.find(function(x){return x.id===itemSel.value;});
+    if(!it){ summary.textContent = ""; return; }
+    var qtyRaw = parseInt(document.getElementById("logQty").value, 10);
+    var qty = (isNaN(qtyRaw) || qtyRaw<1) ? 1 : qtyRaw;
+    var extrasTotal = 0;
+    document.querySelectorAll("#logExtrasBox input[type=checkbox]:checked").forEach(function(cb){
+      var ex = (it.extras||[]).find(function(x){return x.id===cb.value;});
+      if(ex) extrasTotal += ex.price;
+    });
+    var unitPrice = it.price + extrasTotal;
+    var lineTotal = unitPrice * qty;
+    var text = t("price_per_item", {price: currency()+money(unitPrice)});
+    if(qty > 1){
+      text += " · " + t("price_line_total", {total: currency()+money(lineTotal)});
+    }
+    summary.textContent = text;
+  }
+
   document.getElementById("searchMember").addEventListener("input", fillLogDropdowns);
   document.getElementById("searchItem").addEventListener("input", fillLogDropdowns);
-  document.getElementById("logItem").addEventListener("change", updateLogItemPreview);
+  document.getElementById("logItem").addEventListener("change", function(){
+    updateLogItemPreview();
+    updateLogItemExtras();
+  });
+  document.getElementById("logExtrasBox").addEventListener("change", updateLogPriceSummary);
+  document.getElementById("logQty").addEventListener("input", updateLogPriceSummary);
 
   function renderLog(){
     fillLogDropdowns();
@@ -833,7 +929,7 @@
     data.entries.filter(function(e){return e.date===selDate;})
       .sort(function(a,b){return a.ts-b.ts;})
       .forEach(function(e){
-        var lineTotal = e.unitPrice * e.qty;
+        var lineTotal = entryLineTotal(e);
         dayTotal += lineTotal;
         var member = data.members.find(function(m){return m.id===e.memberId;});
         var tr = document.createElement("tr");
@@ -841,7 +937,7 @@
           '<td>'+new Date(e.ts).toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"})+'</td>'+
           '<td>'+escapeHtml(member?member.number:"")+'</td>'+
           '<td>'+escapeHtml(member?member.name:t("removed_member"))+'</td>'+
-          '<td>'+escapeHtml(e.itemName)+'</td>'+
+          '<td>'+escapeHtml(e.itemName)+escapeHtml(entryExtrasSuffix(e))+'</td>'+
           '<td>'+e.qty+'</td>'+
           '<td>'+currency()+money(e.unitPrice)+'</td>'+
           '<td>'+currency()+money(lineTotal)+'</td>'+
@@ -881,6 +977,11 @@
     }
     item.stock -= qty;
     var loggedInUser = getCurrentUser();
+    var chosenExtras = [];
+    document.querySelectorAll("#logExtrasBox input[type=checkbox]:checked").forEach(function(cb){
+      var ex = (item.extras||[]).find(function(x){return x.id===cb.value;});
+      if(ex) chosenExtras.push({name: ex.name, price: ex.price});
+    });
     data.entries.push({
       id: uid(),
       memberId: memberId,
@@ -888,6 +989,7 @@
       itemName: item.name,
       category: item.category,
       unitPrice: item.price,
+      extras: chosenExtras,
       qty: qty,
       date: date,
       ts: Date.now(),
@@ -910,6 +1012,21 @@
     });
   }
 
+  // Extras (toppings/add-ons) are snapshotted onto each entry at the time
+  // it's logged - {name, price} - so later edits to an item's extras list
+  // never change the price of a night that's already been charged.
+  function entryExtrasTotal(e){
+    return (e.extras||[]).reduce(function(sum,ex){ return sum + (ex.price||0); }, 0);
+  }
+  function entryLineTotal(e){
+    return e.qty * (e.unitPrice + entryExtrasTotal(e));
+  }
+  function entryExtrasSuffix(e){
+    var ex = e.extras||[];
+    if(ex.length===0) return "";
+    return " (+" + ex.map(function(x){return x.name;}).join(", ") + ")";
+  }
+
   // ================= REPORTS =================
   function monthEntries(monthStr){
     return data.entries.filter(function(e){ return e.date && e.date.slice(0,7)===monthStr; });
@@ -921,7 +1038,7 @@
     entries.forEach(function(e){
       if(!byMember[e.memberId]) byMember[e.memberId] = {items:0, total:0};
       byMember[e.memberId].items += e.qty;
-      byMember[e.memberId].total += e.unitPrice * e.qty;
+      byMember[e.memberId].total += entryLineTotal(e);
     });
     var rows = Object.keys(byMember).map(function(mid){
       var member = data.members.find(function(m){return m.id===mid;});
@@ -983,7 +1100,7 @@
     var html = '<h3 style="margin-top:20px;">'+escapeHtml(label)+t("detail_heading_suffix")+'</h3>';
     html += '<table><thead><tr><th>'+t("th_date")+'</th><th>'+t("th_item")+'</th><th>'+t("th_qty")+'</th><th>'+t("th_unit_price")+'</th><th>'+t("th_line_total")+'</th><th>'+t("th_logged_by")+'</th></tr></thead><tbody>';
     entries.forEach(function(e){
-      html += '<tr><td>'+e.date+'</td><td>'+escapeHtml(e.itemName)+'</td><td>'+e.qty+'</td><td>'+currency()+money(e.unitPrice)+'</td><td>'+currency()+money(e.unitPrice*e.qty)+'</td><td>'+escapeHtml(e.loggedBy||"-")+'</td></tr>';
+      html += '<tr><td>'+e.date+'</td><td>'+escapeHtml(e.itemName)+escapeHtml(entryExtrasSuffix(e))+'</td><td>'+e.qty+'</td><td>'+currency()+money(e.unitPrice)+'</td><td>'+currency()+money(entryLineTotal(e))+'</td><td>'+escapeHtml(e.loggedBy||"-")+'</td></tr>';
     });
     html += '</tbody></table>';
     box.innerHTML = html;
@@ -1022,7 +1139,7 @@
     out.push([t("th_date"), t("th_member_num"), t("th_member"), t("th_item"), t("th_category"), t("th_qty"), t("th_unit_price"), t("th_line_total"), t("th_logged_by")]);
     entries.forEach(function(e){
       var member = data.members.find(function(m){return m.id===e.memberId;});
-      out.push([e.date, member?member.number:"", member?member.name:t("removed_member"), e.itemName, e.category, e.qty, money(e.unitPrice), money(e.unitPrice*e.qty), e.loggedBy||""]);
+      out.push([e.date, member?member.number:"", member?member.name:t("removed_member"), e.itemName + entryExtrasSuffix(e), e.category, e.qty, money(e.unitPrice), money(entryLineTotal(e)), e.loggedBy||""]);
     });
     downloadCsv("stable-pub-detailed-" + monthStr + ".csv", out);
   });
@@ -1085,6 +1202,8 @@
           data = parsed;
           if(!data.settings) data.settings = { currency: "₪" };
           if(!data.users) data.users = [];
+          if(!data.items) data.items = [];
+          data.items.forEach(function(it){ if(it.extras===undefined) it.extras = []; });
           data.users.forEach(function(u){ if(u.role===undefined) u.role = "staff"; });
           var restoredHasActiveAdmin = data.users.some(function(u){ return u.role==="admin" && u.active; });
           if(!restoredHasActiveAdmin && data.users.length > 0){

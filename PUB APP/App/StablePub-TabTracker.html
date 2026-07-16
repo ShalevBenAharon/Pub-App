@@ -79,6 +79,14 @@
         <div class="field">
           <img id="logItemPreview" class="item-thumb" style="display:none;width:48px;height:48px;">
         </div>
+        <div class="field" id="logExtrasField" style="display:none;">
+          <label data-i18n="label_extras">Extras</label>
+          <div id="logExtrasBox" class="extras-box"></div>
+        </div>
+        <div class="field">
+          <label data-i18n="label_line_price">Price</label>
+          <div id="logPriceSummary" class="price-summary"></div>
+        </div>
         <div class="field">
           <label data-i18n="label_qty">Qty</label>
           <input type="number" id="logQty" value="1" min="1" step="1" style="width:70px;">
@@ -193,6 +201,7 @@
           <th data-i18n="th_category">Category</th>
           <th data-i18n="th_price">Price</th>
           <th data-i18n="th_stock">Stock</th>
+          <th data-i18n="th_extras">Extras</th>
           <th data-i18n="th_status">Status</th>
           <th></th>
         </tr></thead>
