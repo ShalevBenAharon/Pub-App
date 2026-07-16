@@ -882,8 +882,13 @@
     if(!monthStr){ return; }
     var rows = buildSummary(monthStr);
     var grand = 0;
-    rows.forEach(function(r){
-      grand += r.total;
+    rows.forEach(function(r){ grand += r.total; });
+    document.getElementById("reportGrandTotal").textContent = currency() + money(grand);
+
+    var reportQuery = document.getElementById("searchReport").value;
+    var visibleRows = rows.filter(function(r){ return matchesQuery(r.number + " " + r.name, reportQuery); });
+
+    visibleRows.forEach(function(r){
       var tr = document.createElement("tr");
       tr.innerHTML =
         '<td>'+escapeHtml(r.number)+'</td>'+
@@ -893,10 +898,9 @@
         '<td><button class="small" data-mid="'+r.memberId+'">'+t("btn_details")+'</button></td>';
       tbody.appendChild(tr);
     });
-    if(rows.length===0){
-      tbody.innerHTML = '<tr><td colspan="5" class="muted">'+t("no_entries_month")+'</td></tr>';
+    if(visibleRows.length===0){
+      tbody.innerHTML = '<tr><td colspan="5" class="muted">'+t(rows.length===0 ? "no_entries_month" : "no_matching_members")+'</td></tr>';
     }
-    document.getElementById("reportGrandTotal").textContent = currency() + money(grand);
     document.getElementById("reportDetailBox").innerHTML = "";
 
     tbody.querySelectorAll("button[data-mid]").forEach(function(btn){
@@ -905,6 +909,8 @@
       });
     });
   }
+
+  document.getElementById("searchReport").addEventListener("input", renderReport);
 
   function showMemberDetail(monthStr, memberId){
     var entries = monthEntries(monthStr).filter(function(e){return e.memberId===memberId;})
