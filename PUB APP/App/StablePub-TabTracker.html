@@ -9,8 +9,28 @@
 </head>
 <body>
 
+<div id="loginOverlay" class="login-overlay" style="display:none;">
+  <div class="login-box">
+    <h2 data-i18n="login_title">Sign In</h2>
+    <div class="field">
+      <label data-i18n="login_username">Username</label>
+      <input type="text" id="loginUsername">
+    </div>
+    <div class="field">
+      <label data-i18n="login_password">Password</label>
+      <input type="password" id="loginPassword">
+    </div>
+    <div id="loginError" class="login-error" style="display:none;" data-i18n="login_error">Incorrect username or password.</div>
+    <button class="btn" id="btnLogin" data-i18n="login_btn">Log In</button>
+  </div>
+</div>
+
 <header>
   <button id="btnLangToggle" class="lang-toggle" type="button">English</button>
+  <div id="userBadge" class="user-badge" style="display:none;">
+    <span id="userBadgeText"></span>
+    <button id="btnLogout" class="small" data-i18n="btn_logout">Log Out</button>
+  </div>
   <h1>פאב האורווה</h1>
   <p data-i18n="subtitle">Nightly Tab Tracker</p>
 </header>
@@ -21,6 +41,7 @@
   <button data-view="menu" data-i18n="nav_menu">Menu &amp; Prices</button>
   <button data-view="reports" data-i18n="nav_reports">Monthly Report</button>
   <button data-view="backup" data-i18n="nav_backup">Backup &amp; Data</button>
+  <button data-view="staff" data-i18n="nav_staff">Staff</button>
 </nav>
 
 <main>
@@ -74,6 +95,7 @@
           <th data-i18n="th_qty">Qty</th>
           <th data-i18n="th_unit_price">Unit Price</th>
           <th data-i18n="th_line_total">Line Total</th>
+          <th data-i18n="th_staff">Staff</th>
           <th></th>
         </tr></thead>
         <tbody></tbody>
@@ -221,6 +243,45 @@
         </div>
         <button class="btn secondary" id="btnRestore" data-i18n="btn_restore">Restore</button>
       </div>
+    </div>
+  </section>
+
+  <!-- STAFF VIEW -->
+  <section id="view-staff" class="view">
+    <div class="card">
+      <h2 data-i18n="staff_add_title">Add Staff Account</h2>
+      <p class="muted" data-i18n="staff_note">Passwords aren't shown here for privacy - use "Reset Password" to set a new one if someone forgets theirs. This tracks who logged what, it isn't strong security - anyone with technical access to this computer could still see the underlying data.</p>
+      <p class="muted" id="firstAccountNote" style="display:none;" data-i18n="first_account_note">This is the first account, so it will automatically be an Admin.</p>
+      <div class="row">
+        <div class="field">
+          <label data-i18n="label_username">Username</label>
+          <input type="text" id="newStaffUsername">
+        </div>
+        <div class="field">
+          <label data-i18n="label_password">Password</label>
+          <input type="password" id="newStaffPassword">
+        </div>
+        <div class="field" id="newStaffRoleField">
+          <label data-i18n="label_role">Role</label>
+          <select id="newStaffRole">
+            <option value="staff" data-i18n="opt_role_staff">Staff</option>
+            <option value="admin" data-i18n="opt_role_admin">Admin</option>
+          </select>
+        </div>
+        <button class="btn" id="btnAddStaff" data-i18n="btn_add_staff">Add Staff</button>
+      </div>
+    </div>
+    <div class="card">
+      <h2 data-i18n="all_staff_title">All Staff</h2>
+      <table id="staffTable">
+        <thead><tr>
+          <th data-i18n="label_username">Username</th>
+          <th data-i18n="th_role">Role</th>
+          <th data-i18n="th_status">Status</th>
+          <th></th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
     </div>
   </section>
 

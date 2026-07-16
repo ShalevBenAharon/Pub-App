@@ -42,6 +42,59 @@ header p{margin:4px 0 0;font-size:.85em;color:#e8dcc0;}
   cursor:pointer;
 }
 .lang-toggle:hover{background:rgba(255,255,255,.2);}
+.user-badge{
+  position:absolute;
+  top:14px;
+  inset-inline-start:20px;
+  display:flex;
+  align-items:center;
+  gap:8px;
+  font-size:.85em;
+  color:#e8dcc0;
+}
+.user-badge button{
+  background:rgba(255,255,255,.1);
+  border:1px solid var(--gold-light);
+  color:var(--gold-light);
+  padding:4px 10px;
+  border-radius:14px;
+  cursor:pointer;
+}
+.user-badge button:hover{background:rgba(255,255,255,.2);}
+.login-overlay{
+  position:fixed;
+  inset:0;
+  background:rgba(43,29,20,.85);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  z-index:1000;
+}
+.login-box{
+  background:var(--panel);
+  border:1px solid var(--border);
+  border-radius:10px;
+  padding:28px 32px;
+  width:280px;
+  max-width:90vw;
+  box-shadow:0 8px 30px rgba(0,0,0,.4);
+}
+.login-box h2{
+  margin-top:0;
+  color:var(--wood-dark);
+  text-align:center;
+  border-bottom:2px solid var(--gold-light);
+  padding-bottom:8px;
+}
+.login-box .field{margin-bottom:12px;}
+.login-box input{width:100%;}
+.login-box .btn{width:100%;margin-top:6px;}
+.login-error{
+  color:var(--danger-dark);
+  font-size:.85em;
+  margin-bottom:10px;
+  text-align:center;
+}
 nav{
   display:flex;
   background:var(--wood-dark);

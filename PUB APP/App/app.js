@@ -2,6 +2,7 @@
   "use strict";
   var STORAGE_KEY = "stablePubData_v1";
   var LANG_KEY = "stablePubLang";
+  var SESSION_KEY = "stablePubSession";
 
   // ---------- Translation helpers ----------
   function getLang(){
@@ -44,17 +45,214 @@
     renderMenu();
     renderLog();
     renderBackupStatus();
+    renderStaff();
+    updateUserBadge();
     if(document.getElementById("reportMonth").value){
       renderReport();
     }
   }
+
+  // ---------- Staff accounts / login ----------
+  function getCurrentUser(){
+    var username = sessionStorage.getItem(SESSION_KEY);
+    if(!username) return null;
+    return data.users.find(function(u){ return u.username === username && u.active; }) || null;
+  }
+  function needsLogin(){
+    return data.users.length > 0 && !getCurrentUser();
+  }
+  function showLoginGateIfNeeded(){
+    var overlay = document.getElementById("loginOverlay");
+    if(needsLogin()){
+      overlay.style.display = "flex";
+      document.getElementById("loginError").style.display = "none";
+      document.getElementById("loginPassword").value = "";
+      document.getElementById("loginUsername").focus();
+    } else {
+      overlay.style.display = "none";
+    }
+    updateUserBadge();
+  }
+  function updateUserBadge(){
+    var badge = document.getElementById("userBadge");
+    var current = getCurrentUser();
+    if(current){
+      badge.style.display = "flex";
+      document.getElementById("userBadgeText").textContent = t("logged_in_as", {name: current.username});
+    } else {
+      badge.style.display = "none";
+    }
+    updateStaffNavVisibility();
+  }
+
+  function isCurrentUserAdmin(){
+    var current = getCurrentUser();
+    return !!(current && current.role === "admin");
+  }
+  // While there are no accounts yet, staff management stays open so the
+  // very first account can be created - it always becomes an Admin.
+  function canManageStaff(){
+    return data.users.length === 0 || isCurrentUserAdmin();
+  }
+  function requireAdmin(){
+    if(canManageStaff()) return true;
+    alert(t("alert_admin_only"));
+    return false;
+  }
+  function isLastActiveAdmin(u){
+    if(u.role !== "admin" || !u.active) return false;
+    return !data.users.some(function(x){ return x.id!==u.id && x.role==="admin" && x.active; });
+  }
+  function updateStaffNavVisibility(){
+    var staffNavBtn = document.querySelector('nav button[data-view="staff"]');
+    var allowed = canManageStaff();
+    if(staffNavBtn) staffNavBtn.style.display = allowed ? "" : "none";
+    if(!allowed){
+      var staffSection = document.getElementById("view-staff");
+      if(staffSection && staffSection.classList.contains("active")){
+        document.querySelectorAll("section.view").forEach(function(s){ s.classList.remove("active"); });
+        document.querySelectorAll("nav button").forEach(function(b){ b.classList.remove("active"); });
+        document.getElementById("view-log").classList.add("active");
+        var logNavBtn = document.querySelector('nav button[data-view="log"]');
+        if(logNavBtn) logNavBtn.classList.add("active");
+      }
+    }
+  }
+
+  document.getElementById("btnLogin").addEventListener("click", function(){
+    var username = document.getElementById("loginUsername").value.trim();
+    var password = document.getElementById("loginPassword").value;
+    var match = data.users.find(function(u){
+      return u.active && u.username.toLowerCase() === username.toLowerCase() && u.password === password;
+    });
+    if(match){
+      sessionStorage.setItem(SESSION_KEY, match.username);
+      showLoginGateIfNeeded();
+      renderLog();
+    } else {
+      document.getElementById("loginError").style.display = "block";
+    }
+  });
+  ["loginUsername","loginPassword"].forEach(function(id){
+    document.getElementById(id).addEventListener("keydown", function(e){
+      if(e.key === "Enter") document.getElementById("btnLogin").click();
+    });
+  });
+
+  document.getElementById("btnLogout").addEventListener("click", function(){
+    sessionStorage.removeItem(SESSION_KEY);
+    showLoginGateIfNeeded();
+  });
+
+  function renderStaff(){
+    // First account ever: no role picker needed (it's forced to Admin),
+    // and staff management stays open with no gate.
+    var isBootstrap = data.users.length === 0;
+    document.getElementById("firstAccountNote").style.display = isBootstrap ? "block" : "none";
+    document.getElementById("newStaffRoleField").style.display = isBootstrap ? "none" : "";
+    updateStaffNavVisibility();
+
+    var tbody = document.querySelector("#staffTable tbody");
+    tbody.innerHTML = "";
+    data.users.slice().sort(function(a,b){return a.username.localeCompare(b.username);}).forEach(function(u){
+      var hasEntries = data.entries.some(function(e){return e.loggedBy===u.username;});
+      var isAdmin = u.role === "admin";
+      var tr = document.createElement("tr");
+      tr.innerHTML =
+        '<td>'+escapeHtml(u.username)+'</td>'+
+        '<td>'+(isAdmin?t('opt_role_admin'):t('opt_role_staff'))+'</td>'+
+        '<td><span class="badge '+(u.active?'active':'inactive')+'">'+(u.active?t('badge_active'):t('badge_inactive'))+'</span></td>'+
+        '<td></td>';
+      var actionsTd = tr.children[3];
+
+      var resetBtn = document.createElement("button");
+      resetBtn.className = "small";
+      resetBtn.textContent = t("btn_reset_password");
+      resetBtn.onclick = function(){
+        if(!requireAdmin()) return;
+        var newPass = prompt(t("prompt_new_password", {name: u.username}));
+        if(newPass === null) return;
+        if(!newPass.trim()){ alert(t("alert_enter_password")); return; }
+        u.password = newPass;
+        save();
+      };
+      actionsTd.appendChild(resetBtn);
+
+      var roleBtn = document.createElement("button");
+      roleBtn.className = "small";
+      roleBtn.style.marginLeft = "6px";
+      roleBtn.textContent = isAdmin ? t("btn_make_staff") : t("btn_make_admin");
+      roleBtn.onclick = function(){
+        if(!requireAdmin()) return;
+        if(isAdmin){
+          if(isLastActiveAdmin(u)){ alert(t("alert_last_admin")); return; }
+          var current = getCurrentUser();
+          if(current && current.id === u.id && !confirm(t("confirm_remove_own_admin"))) return;
+          u.role = "staff";
+        } else {
+          u.role = "admin";
+        }
+        save(); renderStaff();
+      };
+      actionsTd.appendChild(roleBtn);
+
+      var toggleBtn = document.createElement("button");
+      toggleBtn.className = "small";
+      toggleBtn.style.marginLeft = "6px";
+      toggleBtn.textContent = u.active ? t("btn_deactivate") : t("btn_activate");
+      toggleBtn.onclick = function(){
+        if(!requireAdmin()) return;
+        if(u.active && isLastActiveAdmin(u)){ alert(t("alert_last_admin")); return; }
+        u.active = !u.active; save(); renderStaff();
+      };
+      actionsTd.appendChild(toggleBtn);
+
+      if(!hasEntries){
+        var delBtn = document.createElement("button");
+        delBtn.className = "small";
+        delBtn.style.marginLeft = "6px";
+        delBtn.textContent = t("btn_delete");
+        delBtn.onclick = function(){
+          if(!requireAdmin()) return;
+          if(isLastActiveAdmin(u)){ alert(t("alert_last_admin")); return; }
+          if(confirm(t("confirm_delete_staff", {name:u.username}))){
+            data.users = data.users.filter(function(x){return x.id!==u.id;});
+            save(); renderStaff();
+          }
+        };
+        actionsTd.appendChild(delBtn);
+      }
+      tbody.appendChild(tr);
+    });
+  }
+
+  document.getElementById("btnAddStaff").addEventListener("click", function(){
+    if(!requireAdmin()) return;
+    var usernameInput = document.getElementById("newStaffUsername");
+    var passwordInput = document.getElementById("newStaffPassword");
+    var roleSelect = document.getElementById("newStaffRole");
+    var username = usernameInput.value.trim();
+    var password = passwordInput.value;
+    if(!username){ alert(t("alert_enter_username")); return; }
+    if(!password){ alert(t("alert_enter_password")); return; }
+    var dup = data.users.some(function(u){return u.username.toLowerCase()===username.toLowerCase();});
+    if(dup){ alert(t("alert_username_taken", {name:username})); return; }
+    var isBootstrap = data.users.length === 0;
+    var role = isBootstrap ? "admin" : roleSelect.value;
+    data.users.push({id:uid(), username:username, password:password, active:true, role:role});
+    save();
+    usernameInput.value = "";
+    passwordInput.value = "";
+    roleSelect.value = "staff";
+    renderStaff();
+  });
 
   function uid(){
     return Date.now().toString(36) + Math.random().toString(36).slice(2,7);
   }
 
   function defaultData(){
-    return { members: [], items: [], entries: [], settings: { currency: "₪" } };
+    return { members: [], items: [], entries: [], users: [], settings: { currency: "₪" } };
   }
 
   function load(){
@@ -66,9 +264,19 @@
       if(!parsed.members) parsed.members = [];
       if(!parsed.items) parsed.items = [];
       if(!parsed.entries) parsed.entries = [];
+      if(!parsed.users) parsed.users = [];
       // migrate older data that predates member numbers / stock
       parsed.members.forEach(function(m){ if(m.number===undefined) m.number = ""; });
       parsed.items.forEach(function(it){ if(it.stock===undefined) it.stock = 0; });
+      // migrate staff accounts that predate roles - default to "staff",
+      // but make sure at least one active Admin exists so nobody gets
+      // locked out of staff management.
+      parsed.users.forEach(function(u){ if(u.role===undefined) u.role = "staff"; });
+      var hasActiveAdmin = parsed.users.some(function(u){ return u.role==="admin" && u.active; });
+      if(!hasActiveAdmin && parsed.users.length > 0){
+        var candidate = parsed.users.find(function(u){ return u.active; }) || parsed.users[0];
+        candidate.role = "admin";
+      }
       return parsed;
     }catch(e){
       alert("Could not read saved data, starting fresh. (" + e.message + ")");
@@ -114,6 +322,7 @@
       if(btn.dataset.view === "menu") renderMenu();
       if(btn.dataset.view === "log") renderLog();
       if(btn.dataset.view === "backup") renderBackupStatus();
+      if(btn.dataset.view === "staff") renderStaff();
     });
   });
 
@@ -574,6 +783,7 @@
           '<td>'+e.qty+'</td>'+
           '<td>'+currency()+money(e.unitPrice)+'</td>'+
           '<td>'+currency()+money(lineTotal)+'</td>'+
+          '<td>'+escapeHtml(e.loggedBy||"-")+'</td>'+
           '<td></td>';
         var delBtn = document.createElement("button");
         delBtn.className="small"; delBtn.textContent=t("btn_delete");
@@ -585,7 +795,7 @@
             save(); renderLog();
           }
         };
-        tr.children[7].appendChild(delBtn);
+        tr.children[8].appendChild(delBtn);
         tbody.appendChild(tr);
       });
     document.getElementById("logDayTotal").textContent = currency() + money(dayTotal);
@@ -608,6 +818,7 @@
       if(!proceed) return;
     }
     item.stock -= qty;
+    var loggedInUser = getCurrentUser();
     data.entries.push({
       id: uid(),
       memberId: memberId,
@@ -617,7 +828,8 @@
       unitPrice: item.price,
       qty: qty,
       date: date,
-      ts: Date.now()
+      ts: Date.now(),
+      loggedBy: loggedInUser ? loggedInUser.username : ""
     });
     save();
     document.getElementById("logQty").value = "1";
@@ -701,9 +913,9 @@
     var box = document.getElementById("reportDetailBox");
     var label = member ? (member.number + " - " + member.name) : t("removed_member");
     var html = '<h3 style="margin-top:20px;">'+escapeHtml(label)+t("detail_heading_suffix")+'</h3>';
-    html += '<table><thead><tr><th>'+t("th_date")+'</th><th>'+t("th_item")+'</th><th>'+t("th_qty")+'</th><th>'+t("th_unit_price")+'</th><th>'+t("th_line_total")+'</th></tr></thead><tbody>';
+    html += '<table><thead><tr><th>'+t("th_date")+'</th><th>'+t("th_item")+'</th><th>'+t("th_qty")+'</th><th>'+t("th_unit_price")+'</th><th>'+t("th_line_total")+'</th><th>'+t("th_logged_by")+'</th></tr></thead><tbody>';
     entries.forEach(function(e){
-      html += '<tr><td>'+e.date+'</td><td>'+escapeHtml(e.itemName)+'</td><td>'+e.qty+'</td><td>'+currency()+money(e.unitPrice)+'</td><td>'+currency()+money(e.unitPrice*e.qty)+'</td></tr>';
+      html += '<tr><td>'+e.date+'</td><td>'+escapeHtml(e.itemName)+'</td><td>'+e.qty+'</td><td>'+currency()+money(e.unitPrice)+'</td><td>'+currency()+money(e.unitPrice*e.qty)+'</td><td>'+escapeHtml(e.loggedBy||"-")+'</td></tr>';
     });
     html += '</tbody></table>';
     box.innerHTML = html;
@@ -739,10 +951,10 @@
     var out = [];
     out.push([t("csv_detail_title", {month: monthStr})]);
     out.push([]);
-    out.push([t("th_date"), t("th_member_num"), t("th_member"), t("th_item"), t("th_category"), t("th_qty"), t("th_unit_price"), t("th_line_total")]);
+    out.push([t("th_date"), t("th_member_num"), t("th_member"), t("th_item"), t("th_category"), t("th_qty"), t("th_unit_price"), t("th_line_total"), t("th_logged_by")]);
     entries.forEach(function(e){
       var member = data.members.find(function(m){return m.id===e.memberId;});
-      out.push([e.date, member?member.number:"", member?member.name:t("removed_member"), e.itemName, e.category, e.qty, money(e.unitPrice), money(e.unitPrice*e.qty)]);
+      out.push([e.date, member?member.number:"", member?member.name:t("removed_member"), e.itemName, e.category, e.qty, money(e.unitPrice), money(e.unitPrice*e.qty), e.loggedBy||""]);
     });
     downloadCsv("stable-pub-detailed-" + monthStr + ".csv", out);
   });
@@ -804,11 +1016,20 @@
         if(confirm(t("confirm_restore"))){
           data = parsed;
           if(!data.settings) data.settings = { currency: "₪" };
+          if(!data.users) data.users = [];
+          data.users.forEach(function(u){ if(u.role===undefined) u.role = "staff"; });
+          var restoredHasActiveAdmin = data.users.some(function(u){ return u.role==="admin" && u.active; });
+          if(!restoredHasActiveAdmin && data.users.length > 0){
+            var restoredCandidate = data.users.find(function(u){ return u.active; }) || data.users[0];
+            restoredCandidate.role = "admin";
+          }
+          sessionStorage.removeItem(SESSION_KEY);
           save();
           renderMembers(); renderMenu(); renderLog();
-          renderBackupStatus();
+          renderBackupStatus(); renderStaff();
           document.getElementById("reportTable").querySelector("tbody").innerHTML = "";
           alert(t("alert_backup_restored"));
+          showLoginGateIfNeeded();
         }
       }catch(err){
         alert(t("alert_restore_read_error", {msg: err.message}));
@@ -824,4 +1045,5 @@
   monthInput.value = now.getFullYear() + "-" + pad(now.getMonth()+1);
 
   applyLanguage();
+  showLoginGateIfNeeded();
 })();
