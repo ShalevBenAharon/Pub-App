@@ -304,3 +304,13 @@ footer{
   font-size:.92em;
   white-space:nowrap;
 }
+.checkbox-label{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  flex-direction:row;
+  cursor:pointer;
+  padding:7px 0;
+  font-size:.95em;
+}
+.checkbox-label input{margin:0;}

@@ -92,6 +92,7 @@
           <input type="number" id="logQty" value="1" min="1" step="1" style="width:70px;">
         </div>
         <button class="btn" id="btnAddEntry" data-i18n="btn_add">Add</button>
+        <span id="logPrintStatus" class="muted"></span>
       </div>
     </div>
 
@@ -260,6 +261,34 @@
         </div>
         <button class="btn secondary" id="btnRestore" data-i18n="btn_restore">Restore</button>
       </div>
+    </div>
+    <div class="card">
+      <h2 data-i18n="printer_title">Kitchen Printer</h2>
+      <p class="muted" data-i18n="printer_desc">Automatically print a ticket to your receipt printer when a food or drink item is logged. Turn on whichever category you want printed - both, either, or neither.</p>
+      <div class="row">
+        <div class="field">
+          <label class="checkbox-label">
+            <input type="checkbox" id="printFoodToggle">
+            <span data-i18n="printer_print_food">Print Food orders</span>
+          </label>
+        </div>
+        <div class="field">
+          <label class="checkbox-label">
+            <input type="checkbox" id="printDrinksToggle">
+            <span data-i18n="printer_print_drinks">Print Drink orders</span>
+          </label>
+        </div>
+      </div>
+      <div class="row">
+        <div class="field">
+          <label data-i18n="printer_target_label">Printer name or COM port</label>
+          <input type="text" id="printerTarget" placeholder="e.g. POS58 or COM5" data-i18n-placeholder="printer_target_placeholder">
+        </div>
+        <button class="btn secondary" id="btnSavePrinterSettings" data-i18n="btn_save">Save</button>
+        <button class="btn secondary" id="btnTestPrint" data-i18n="printer_btn_test">Send Test Print</button>
+      </div>
+      <p class="muted" id="printerSettingsStatus"></p>
+      <p class="muted" data-i18n="printer_help">Find the name in Windows' "Devices and Printers" if it installed as a printer, or the COM port number (e.g. COM5) in Device Manager under "Ports" if it connects as a serial device. If ticket text prints as garbled symbols, try adding ":19200" after the COM port (e.g. COM5:19200).</p>
     </div>
   </section>
 

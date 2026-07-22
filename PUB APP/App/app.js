@@ -45,6 +45,7 @@
     renderMenu();
     renderLog();
     renderBackupStatus();
+    renderPrinterSettings();
     renderStaff();
     updateUserBadge();
     if(document.getElementById("reportMonth").value){
@@ -252,7 +253,7 @@
   }
 
   function defaultData(){
-    return { members: [], items: [], entries: [], users: [], settings: { currency: "₪" } };
+    return { members: [], items: [], entries: [], users: [], settings: { currency: "₪", printFood: false, printDrinks: false, printerTarget: "" } };
   }
 
   function load(){
@@ -261,6 +262,9 @@
       if(!raw) return defaultData();
       var parsed = JSON.parse(raw);
       if(!parsed.settings) parsed.settings = { currency: "₪" };
+      if(parsed.settings.printFood===undefined) parsed.settings.printFood = false;
+      if(parsed.settings.printDrinks===undefined) parsed.settings.printDrinks = false;
+      if(parsed.settings.printerTarget===undefined) parsed.settings.printerTarget = "";
       if(!parsed.members) parsed.members = [];
       if(!parsed.items) parsed.items = [];
       if(!parsed.entries) parsed.entries = [];
@@ -324,7 +328,7 @@
       if(btn.dataset.view === "members") renderMembers();
       if(btn.dataset.view === "menu") renderMenu();
       if(btn.dataset.view === "log") renderLog();
-      if(btn.dataset.view === "backup") renderBackupStatus();
+      if(btn.dataset.view === "backup") { renderBackupStatus(); renderPrinterSettings(); }
       if(btn.dataset.view === "staff") renderStaff();
     });
   });
@@ -943,6 +947,22 @@
           '<td>'+currency()+money(lineTotal)+'</td>'+
           '<td>'+escapeHtml(e.loggedBy||"-")+'</td>'+
           '<td></td>';
+        if(data.settings.printFood || data.settings.printDrinks){
+          var reprintBtn = document.createElement("button");
+          reprintBtn.className="small"; reprintBtn.style.marginRight="6px";
+          reprintBtn.textContent=t("btn_reprint");
+          reprintBtn.onclick = function(){
+            reprintBtn.textContent = t("printer_printing");
+            sendKitchenTicket(ticketPayloadFromEntry(e)).then(function(resJson){
+              reprintBtn.textContent = (resJson && resJson.ok) ? t("printer_printed_ok") : t("printer_printed_fail");
+              setTimeout(function(){ reprintBtn.textContent = t("btn_reprint"); }, 2500);
+            }).catch(function(){
+              reprintBtn.textContent = t("printer_printed_fail");
+              setTimeout(function(){ reprintBtn.textContent = t("btn_reprint"); }, 2500);
+            });
+          };
+          tr.children[8].appendChild(reprintBtn);
+        }
         var delBtn = document.createElement("button");
         delBtn.className="small"; delBtn.textContent=t("btn_delete");
         delBtn.onclick = function(){
@@ -982,7 +1002,7 @@
       var ex = (item.extras||[]).find(function(x){return x.id===cb.value;});
       if(ex) chosenExtras.push({name: ex.name, price: ex.price});
     });
-    data.entries.push({
+    var newEntry = {
       id: uid(),
       memberId: memberId,
       itemId: itemId,
@@ -994,12 +1014,29 @@
       date: date,
       ts: Date.now(),
       loggedBy: loggedInUser ? loggedInUser.username : ""
-    });
+    };
+    data.entries.push(newEntry);
     save();
     document.getElementById("logQty").value = "1";
     renderLog();
     renderMenu();
+    maybeAutoPrintTicket(newEntry);
   });
+
+  function maybeAutoPrintTicket(e){
+    var shouldPrint = (e.category === "Food" && data.settings.printFood) ||
+                       (e.category === "Drink" && data.settings.printDrinks);
+    if(!shouldPrint) return;
+    var statusEl = document.getElementById("logPrintStatus");
+    statusEl.textContent = t("printer_printing");
+    sendKitchenTicket(ticketPayloadFromEntry(e)).then(function(resJson){
+      statusEl.textContent = (resJson && resJson.ok) ? t("printer_printed_ok") : t("printer_printed_fail");
+      setTimeout(function(){ statusEl.textContent = ""; }, 4000);
+    }).catch(function(){
+      statusEl.textContent = t("printer_printed_fail");
+      setTimeout(function(){ statusEl.textContent = ""; }, 4000);
+    });
+  }
 
   function todayStr(){
     var d = new Date();
@@ -1186,6 +1223,64 @@
   document.getElementById("btnBackup").addEventListener("click", doBackup);
   document.getElementById("btnBackupFromReminder").addEventListener("click", doBackup);
 
+  // ================= KITCHEN PRINTER =================
+  function renderPrinterSettings(){
+    document.getElementById("printFoodToggle").checked = !!data.settings.printFood;
+    document.getElementById("printDrinksToggle").checked = !!data.settings.printDrinks;
+    document.getElementById("printerTarget").value = data.settings.printerTarget || "";
+  }
+
+  document.getElementById("btnSavePrinterSettings").addEventListener("click", function(){
+    data.settings.printFood = document.getElementById("printFoodToggle").checked;
+    data.settings.printDrinks = document.getElementById("printDrinksToggle").checked;
+    data.settings.printerTarget = document.getElementById("printerTarget").value.trim();
+    save();
+    var status = document.getElementById("printerSettingsStatus");
+    status.textContent = t("printer_settings_saved");
+    setTimeout(function(){ status.textContent = ""; }, 2500);
+  });
+
+  function sendKitchenTicket(payload){
+    return fetch("/api/print-ticket", {
+      method: "POST",
+      headers: {"Content-Type": "application/json; charset=utf-8"},
+      body: JSON.stringify(payload)
+    }).then(function(res){ return res.json(); });
+  }
+
+  function ticketPayloadFromEntry(e){
+    var member = data.members.find(function(m){return m.id===e.memberId;});
+    return {
+      printerTarget: data.settings.printerTarget || "",
+      category: e.category,
+      itemName: e.itemName,
+      extras: (e.extras||[]).map(function(x){return x.name;}),
+      qty: e.qty,
+      memberLabel: member ? (member.number + " - " + member.name) : "",
+      time: new Date(e.ts).toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"})
+    };
+  }
+
+  document.getElementById("btnTestPrint").addEventListener("click", function(){
+    var target = document.getElementById("printerTarget").value.trim();
+    var status = document.getElementById("printerSettingsStatus");
+    if(!target){ alert(t("alert_enter_printer_target")); return; }
+    status.textContent = t("printer_testing");
+    sendKitchenTicket({
+      printerTarget: target,
+      category: "Food",
+      itemName: t("printer_test_item"),
+      extras: [],
+      qty: 1,
+      memberLabel: "",
+      time: new Date().toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"})
+    }).then(function(resJson){
+      status.textContent = (resJson && resJson.ok) ? t("printer_test_success") : (t("printer_test_failed") + (resJson && resJson.error ? " " + resJson.error : ""));
+    }).catch(function(){
+      status.textContent = t("printer_test_failed");
+    });
+  });
+
   document.getElementById("btnRestore").addEventListener("click", function(){
     var fileInput = document.getElementById("restoreFile");
     var file = fileInput.files[0];
@@ -1201,6 +1296,9 @@
         if(confirm(t("confirm_restore"))){
           data = parsed;
           if(!data.settings) data.settings = { currency: "₪" };
+          if(data.settings.printFood===undefined) data.settings.printFood = false;
+          if(data.settings.printDrinks===undefined) data.settings.printDrinks = false;
+          if(data.settings.printerTarget===undefined) data.settings.printerTarget = "";
           if(!data.users) data.users = [];
           if(!data.items) data.items = [];
           data.items.forEach(function(it){ if(it.extras===undefined) it.extras = []; });
