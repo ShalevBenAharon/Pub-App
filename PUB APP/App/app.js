@@ -819,12 +819,12 @@
     var prevItem = itemSel.value;
     itemSel.innerHTML = "";
     var anyItems = false;
-    ["Drink","Food","Other"].forEach(function(cat){
+    ["Drink","Food","Event","Other"].forEach(function(cat){
       var group = data.items.filter(function(it){return it.active && it.category===cat && matchesQuery(it.name, itemQuery);});
       if(group.length===0) return;
       anyItems = true;
       var optgroup = document.createElement("optgroup");
-      var catKey = cat==="Drink" ? "opt_drink" : (cat==="Food" ? "opt_food" : "opt_other");
+      var catKey = cat==="Drink" ? "opt_drink" : (cat==="Food" ? "opt_food" : (cat==="Event" ? "opt_event" : "opt_other"));
       optgroup.label = t(catKey);
       group.sort(function(a,b){return a.name.localeCompare(b.name);}).forEach(function(it){
         var opt = document.createElement("option");
@@ -843,6 +843,7 @@
     if(prevItem) itemSel.value = prevItem;
     updateLogItemPreview();
     updateLogItemExtras();
+    updateLogEventFields();
   }
 
   function updateLogItemPreview(){
@@ -904,11 +905,21 @@
     summary.textContent = text;
   }
 
+  function updateLogEventFields(){
+    var itemSel = document.getElementById("logItem");
+    var it = data.items.find(function(x){return x.id===itemSel.value;});
+    var isEvent = !!(it && it.category === "Event");
+    document.getElementById("logEventDateField").style.display = isEvent ? "" : "none";
+    document.getElementById("logEventStartField").style.display = isEvent ? "" : "none";
+    document.getElementById("logEventEndField").style.display = isEvent ? "" : "none";
+  }
+
   document.getElementById("searchMember").addEventListener("input", fillLogDropdowns);
   document.getElementById("searchItem").addEventListener("input", fillLogDropdowns);
   document.getElementById("logItem").addEventListener("change", function(){
     updateLogItemPreview();
     updateLogItemExtras();
+    updateLogEventFields();
   });
   document.getElementById("logExtrasBox").addEventListener("change", updateLogPriceSummary);
   document.getElementById("logQty").addEventListener("input", updateLogPriceSummary);
@@ -941,7 +952,7 @@
           '<td>'+new Date(e.ts).toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"})+'</td>'+
           '<td>'+escapeHtml(member?member.number:"")+'</td>'+
           '<td>'+escapeHtml(member?member.name:t("removed_member"))+'</td>'+
-          '<td>'+escapeHtml(e.itemName)+escapeHtml(entryExtrasSuffix(e))+'</td>'+
+          '<td>'+escapeHtml(e.itemName)+escapeHtml(entryExtrasSuffix(e))+escapeHtml(entryEventSuffix(e))+'</td>'+
           '<td>'+e.qty+'</td>'+
           '<td>'+currency()+money(e.unitPrice)+'</td>'+
           '<td>'+currency()+money(lineTotal)+'</td>'+
@@ -991,11 +1002,19 @@
     if(!itemId){ alert(t("alert_select_item")); return; }
     if(isNaN(qty) || qty<1){ alert(t("alert_enter_valid_qty")); return; }
     var item = data.items.find(function(it){return it.id===itemId;});
-    if(item.stock - qty < 0){
+    var isEvent = item.category === "Event";
+    var eventDate = document.getElementById("logEventDate").value;
+    var eventStart = document.getElementById("logEventStart").value;
+    var eventEnd = document.getElementById("logEventEnd").value;
+    if(isEvent){
+      if(!eventDate){ alert(t("alert_event_date_required")); return; }
+      if(!eventStart || !eventEnd){ alert(t("alert_event_time_required")); return; }
+    }
+    if(!isEvent && item.stock - qty < 0){
       var proceed = confirm(t("confirm_low_stock", {n:item.stock, item:item.name}));
       if(!proceed) return;
     }
-    item.stock -= qty;
+    if(!isEvent) item.stock -= qty;
     var loggedInUser = getCurrentUser();
     var chosenExtras = [];
     document.querySelectorAll("#logExtrasBox input[type=checkbox]:checked").forEach(function(cb){
@@ -1015,9 +1034,17 @@
       ts: Date.now(),
       loggedBy: loggedInUser ? loggedInUser.username : ""
     };
+    if(isEvent){
+      newEntry.eventDate = eventDate;
+      newEntry.eventStart = eventStart;
+      newEntry.eventEnd = eventEnd;
+    }
     data.entries.push(newEntry);
     save();
     document.getElementById("logQty").value = "1";
+    document.getElementById("logEventDate").value = "";
+    document.getElementById("logEventStart").value = "";
+    document.getElementById("logEventEnd").value = "";
     renderLog();
     renderMenu();
     maybeAutoPrintTicket(newEntry);
@@ -1062,6 +1089,11 @@
     var ex = e.extras||[];
     if(ex.length===0) return "";
     return " (+" + ex.map(function(x){return x.name;}).join(", ") + ")";
+  }
+  function entryEventSuffix(e){
+    if(!e.eventDate) return "";
+    var range = e.eventStart ? (e.eventStart + (e.eventEnd ? "–" + e.eventEnd : "")) : "";
+    return " [" + t("event_suffix_label") + " " + e.eventDate + (range ? " " + range : "") + "]";
   }
 
   // ================= REPORTS =================
@@ -1137,7 +1169,7 @@
     var html = '<h3 style="margin-top:20px;">'+escapeHtml(label)+t("detail_heading_suffix")+'</h3>';
     html += '<table><thead><tr><th>'+t("th_date")+'</th><th>'+t("th_item")+'</th><th>'+t("th_qty")+'</th><th>'+t("th_unit_price")+'</th><th>'+t("th_line_total")+'</th><th>'+t("th_logged_by")+'</th></tr></thead><tbody>';
     entries.forEach(function(e){
-      html += '<tr><td>'+e.date+'</td><td>'+escapeHtml(e.itemName)+escapeHtml(entryExtrasSuffix(e))+'</td><td>'+e.qty+'</td><td>'+currency()+money(e.unitPrice)+'</td><td>'+currency()+money(entryLineTotal(e))+'</td><td>'+escapeHtml(e.loggedBy||"-")+'</td></tr>';
+      html += '<tr><td>'+e.date+'</td><td>'+escapeHtml(e.itemName)+escapeHtml(entryExtrasSuffix(e))+escapeHtml(entryEventSuffix(e))+'</td><td>'+e.qty+'</td><td>'+currency()+money(e.unitPrice)+'</td><td>'+currency()+money(entryLineTotal(e))+'</td><td>'+escapeHtml(e.loggedBy||"-")+'</td></tr>';
     });
     html += '</tbody></table>';
     box.innerHTML = html;
@@ -1176,7 +1208,7 @@
     out.push([t("th_date"), t("th_member_num"), t("th_member"), t("th_item"), t("th_category"), t("th_qty"), t("th_unit_price"), t("th_line_total"), t("th_logged_by")]);
     entries.forEach(function(e){
       var member = data.members.find(function(m){return m.id===e.memberId;});
-      out.push([e.date, member?member.number:"", member?member.name:t("removed_member"), e.itemName + entryExtrasSuffix(e), e.category, e.qty, money(e.unitPrice), money(entryLineTotal(e)), e.loggedBy||""]);
+      out.push([e.date, member?member.number:"", member?member.name:t("removed_member"), e.itemName + entryExtrasSuffix(e) + entryEventSuffix(e), e.category, e.qty, money(e.unitPrice), money(entryLineTotal(e)), e.loggedBy||""]);
     });
     downloadCsv("stable-pub-detailed-" + monthStr + ".csv", out);
   });

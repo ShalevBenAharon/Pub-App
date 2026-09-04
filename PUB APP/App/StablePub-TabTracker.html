@@ -83,6 +83,18 @@
           <label data-i18n="label_extras">Extras</label>
           <div id="logExtrasBox" class="extras-box"></div>
         </div>
+        <div class="field" id="logEventDateField" style="display:none;">
+          <label data-i18n="label_event_date">Event Date</label>
+          <input type="date" id="logEventDate">
+        </div>
+        <div class="field" id="logEventStartField" style="display:none;">
+          <label data-i18n="label_event_start">Start Time</label>
+          <input type="time" id="logEventStart">
+        </div>
+        <div class="field" id="logEventEndField" style="display:none;">
+          <label data-i18n="label_event_end">End Time</label>
+          <input type="time" id="logEventEnd">
+        </div>
         <div class="field">
           <label data-i18n="label_line_price">Price</label>
           <div id="logPriceSummary" class="price-summary"></div>
@@ -172,6 +184,7 @@
           <select id="newItemCategory">
             <option value="Drink" data-i18n="opt_drink">Drink</option>
             <option value="Food" data-i18n="opt_food">Food</option>
+            <option value="Event" data-i18n="opt_event">Event</option>
             <option value="Other" data-i18n="opt_other">Other</option>
           </select>
         </div>
