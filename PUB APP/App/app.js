@@ -47,9 +47,12 @@
     renderBackupStatus();
     renderPrinterSettings();
     renderStaff();
+    renderCalendar();
     updateUserBadge();
     if(document.getElementById("reportMonth").value){
+      var reopen = openDetail;
       renderReport();
+      if(reopen) showMemberDetail(reopen.monthStr, reopen.memberId);
     }
   }
 
@@ -104,20 +107,46 @@
     if(u.role !== "admin" || !u.active) return false;
     return !data.users.some(function(x){ return x.id!==u.id && x.role==="admin" && x.active; });
   }
+  // Log Drinks is the only tab a non-admin gets. Everything else - members,
+  // menu and prices, the calendar, the monthly report, backup, staff - is
+  // admin-only. Written as "everything except the log" rather than a list of
+  // admin tabs on purpose: any tab added later is hidden from staff by
+  // default, which is the safe way round to be wrong.
+  var STAFF_VIEW = "log";
+
+  function isViewAllowed(view){
+    return view === STAFF_VIEW || canManageStaff();
+  }
+
+  function goToLogView(){
+    document.querySelectorAll("section.view").forEach(function(s){ s.classList.remove("active"); });
+    document.querySelectorAll("nav button").forEach(function(b){ b.classList.remove("active"); });
+    document.getElementById("view-" + STAFF_VIEW).classList.add("active");
+    var logNavBtn = document.querySelector('nav button[data-view="' + STAFF_VIEW + '"]');
+    if(logNavBtn) logNavBtn.classList.add("active");
+  }
+
   function updateStaffNavVisibility(){
-    var staffNavBtn = document.querySelector('nav button[data-view="staff"]');
-    var allowed = canManageStaff();
-    if(staffNavBtn) staffNavBtn.style.display = allowed ? "" : "none";
-    if(!allowed){
-      var staffSection = document.getElementById("view-staff");
-      if(staffSection && staffSection.classList.contains("active")){
-        document.querySelectorAll("section.view").forEach(function(s){ s.classList.remove("active"); });
-        document.querySelectorAll("nav button").forEach(function(b){ b.classList.remove("active"); });
-        document.getElementById("view-log").classList.add("active");
-        var logNavBtn = document.querySelector('nav button[data-view="log"]');
-        if(logNavBtn) logNavBtn.classList.add("active");
+    var kickedOut = false;
+    document.querySelectorAll("nav button").forEach(function(navBtn){
+      var view = navBtn.dataset.view;
+      var allowed = isViewAllowed(view);
+      navBtn.style.display = allowed ? "" : "none";
+      if(!allowed){
+        var section = document.getElementById("view-" + view);
+        // If a now-forbidden tab is the one on screen (they just logged out,
+        // or signed in as staff), don't leave them staring at it.
+        if(section && section.classList.contains("active")) kickedOut = true;
       }
-    }
+    });
+    if(kickedOut) goToLogView();
+
+    // Re-evaluate the "back up now" nudge on the Log tab: it's admin
+    // housekeeping and its button downloads the whole data file, so staff
+    // shouldn't be handed it. renderBackupStatus owns that decision - calling
+    // it here is what makes the nudge appear when an admin signs in, since
+    // otherwise it's only worked out at page load, before anyone has.
+    renderBackupStatus();
   }
 
   document.getElementById("btnLogin").addEventListener("click", function(){
@@ -321,6 +350,7 @@
   var navButtons = document.querySelectorAll("nav button");
   navButtons.forEach(function(btn){
     btn.addEventListener("click", function(){
+      if(!isViewAllowed(btn.dataset.view)){ goToLogView(); return; }
       navButtons.forEach(function(b){ b.classList.remove("active"); });
       btn.classList.add("active");
       document.querySelectorAll("section.view").forEach(function(s){ s.classList.remove("active"); });
@@ -330,6 +360,7 @@
       if(btn.dataset.view === "log") renderLog();
       if(btn.dataset.view === "backup") { renderBackupStatus(); renderPrinterSettings(); }
       if(btn.dataset.view === "staff") renderStaff();
+      if(btn.dataset.view === "calendar") renderCalendar();
     });
   });
 
@@ -829,7 +860,11 @@
       group.sort(function(a,b){return a.name.localeCompare(b.name);}).forEach(function(it){
         var opt = document.createElement("option");
         opt.value = it.id;
-        var stockLabel = it.stock<=0 ? t("out_of_stock_suffix") : t("stock_suffix", {n: it.stock});
+        // Events aren't stocked goods - logging one never takes anything out
+        // of the cellar - so they get no stock count and, importantly, are
+        // never labelled "out of stock".
+        var stockLabel = (it.category === "Event") ? ""
+          : (it.stock<=0 ? t("out_of_stock_suffix") : t("stock_suffix", {n: it.stock}));
         opt.textContent = it.name + " (" + currency() + money(it.price) + stockLabel + ")";
         optgroup.appendChild(opt);
       });
@@ -935,8 +970,8 @@
     }
 
     var dateInput = document.getElementById("logDate");
-    if(!dateInput.value) dateInput.value = todayStr();
-    var selDate = dateInput.value;
+    if(!dateInput.value) setDateField("logDate", todayStr());
+    var selDate = getDateField("logDate") || "";
 
     var tbody = document.querySelector("#logTable tbody");
     tbody.innerHTML = "";
@@ -979,9 +1014,11 @@
         delBtn.onclick = function(){
           if(confirm(t("confirm_remove_entry"))){
             var relatedItem = data.items.find(function(x){return x.id===e.itemId;});
-            if(relatedItem) relatedItem.stock += e.qty;
+            // Events never took stock out (see the Add handler), so they must
+            // not put any back in when removed - only real goods do.
+            if(relatedItem && e.category !== "Event") relatedItem.stock += e.qty;
             data.entries = data.entries.filter(function(x){return x.id!==e.id;});
-            save(); renderLog();
+            save(); renderLog(); renderCalendar();
           }
         };
         tr.children[8].appendChild(delBtn);
@@ -990,25 +1027,28 @@
     document.getElementById("logDayTotal").textContent = currency() + money(dayTotal);
   }
 
-  document.getElementById("logDate").addEventListener("change", renderLog);
 
   document.getElementById("btnAddEntry").addEventListener("click", function(){
-    var date = document.getElementById("logDate").value;
+    var date = getDateField("logDate");
     var memberId = document.getElementById("logMember").value;
     var itemId = document.getElementById("logItem").value;
     var qty = parseInt(document.getElementById("logQty").value, 10);
+    if(date === null){ alert(t("alert_invalid_date")); return; }
     if(!date){ alert(t("alert_pick_date")); return; }
     if(!memberId){ alert(t("alert_select_member")); return; }
     if(!itemId){ alert(t("alert_select_item")); return; }
     if(isNaN(qty) || qty<1){ alert(t("alert_enter_valid_qty")); return; }
     var item = data.items.find(function(it){return it.id===itemId;});
     var isEvent = item.category === "Event";
-    var eventDate = document.getElementById("logEventDate").value;
-    var eventStart = document.getElementById("logEventStart").value;
-    var eventEnd = document.getElementById("logEventEnd").value;
+    var eventDate = getDateField("logEventDate");
+    var eventStart = getTimeField("logEventStart");
+    var eventEnd = getTimeField("logEventEnd");
     if(isEvent){
+      if(eventDate === null){ alert(t("alert_invalid_date")); return; }
+      if(eventStart === null || eventEnd === null){ alert(t("alert_invalid_time")); return; }
       if(!eventDate){ alert(t("alert_event_date_required")); return; }
       if(!eventStart || !eventEnd){ alert(t("alert_event_time_required")); return; }
+      if(eventEnd <= eventStart){ alert(t("alert_event_end_before_start")); return; }
     }
     if(!isEvent && item.stock - qty < 0){
       var proceed = confirm(t("confirm_low_stock", {n:item.stock, item:item.name}));
@@ -1042,11 +1082,12 @@
     data.entries.push(newEntry);
     save();
     document.getElementById("logQty").value = "1";
-    document.getElementById("logEventDate").value = "";
-    document.getElementById("logEventStart").value = "";
-    document.getElementById("logEventEnd").value = "";
+    setDateField("logEventDate", "");
+    setTimeField("logEventStart", "");
+    setTimeField("logEventEnd", "");
     renderLog();
     renderMenu();
+    if(isEvent) renderCalendar();
     maybeAutoPrintTicket(newEntry);
   });
 
@@ -1090,10 +1131,443 @@
     if(ex.length===0) return "";
     return " (+" + ex.map(function(x){return x.name;}).join(", ") + ")";
   }
-  function entryEventSuffix(e){
+  // forScreen wraps the range in \u2066/\u2069 so a right-to-left page doesn't
+  // render "20:00-23:00" back-to-front. CSV files ask for the plain version -
+  // those control characters have no business in an exported spreadsheet.
+  function timeRangeText(start, end, forScreen){
+    if(!start) return "";
+    var range = start + (end ? "–" + end : "");
+    return forScreen ? "\u2066" + range + "\u2069" : range;
+  }
+  function entryEventSuffix(e, forScreen){
     if(!e.eventDate) return "";
-    var range = e.eventStart ? (e.eventStart + (e.eventEnd ? "–" + e.eventEnd : "")) : "";
-    return " [" + t("event_suffix_label") + " " + e.eventDate + (range ? " " + range : "") + "]";
+    var range = timeRangeText(e.eventStart, e.eventEnd, forScreen !== false);
+    return " [" + t("event_suffix_label") + " " + displayDate(e.eventDate) + (range ? " " + range : "") + "]";
+  }
+
+
+
+  // ================= DATE & TIME FIELDS =================
+  // Chrome renders a native <input type="date"/"time"> according to the
+  // *browser's* own language setting, not the page's - which is why the
+  // time boxes were showing an AM/PM slot on an English Chrome. A page
+  // cannot override that, so these are plain text boxes that we format
+  // ourselves: always dd/mm/yyyy and a 24-hour HH:MM, in every browser
+  // and in both app languages. Entries are still stored the same way as
+  // before (YYYY-MM-DD and HH:MM), so nothing downstream changes.
+
+  function digitsOf(str){ return String(str || "").replace(/\D/g, ""); }
+
+  // ---- time: "HH:MM", 00:00 - 23:59 ----
+  function normalizeTime(raw){
+    var d = digitsOf(raw);
+    var hh, mm;
+    if(d.length === 1){ hh = "0" + d;            mm = "00"; }
+    else if(d.length === 2){ hh = d;             mm = "00"; }
+    else if(d.length === 3){ hh = "0" + d.charAt(0); mm = d.slice(1); }
+    else if(d.length === 4){ hh = d.slice(0,2);  mm = d.slice(2); }
+    else return null;
+    if(Number(hh) > 23 || Number(mm) > 59) return null;
+    return hh + ":" + mm;
+  }
+  function maskTime(raw){
+    var d = digitsOf(raw).slice(0,4);
+    // Only insert the colon once there's a third digit, so backspacing
+    // over it doesn't immediately put it back.
+    return d.length > 2 ? d.slice(0,2) + ":" + d.slice(2) : d;
+  }
+
+  // ---- date: shown as "dd/mm/yyyy", stored as "YYYY-MM-DD" ----
+  function normalizeDate(raw){
+    var d = digitsOf(raw);
+    var dd, mm, yyyy;
+    if(d.length === 8){ dd = d.slice(0,2); mm = d.slice(2,4); yyyy = d.slice(4); }
+    else if(d.length === 6){ dd = d.slice(0,2); mm = d.slice(2,4); yyyy = "20" + d.slice(4); }
+    else if(d.length === 4){ dd = d.slice(0,2); mm = d.slice(2,4); yyyy = String(new Date().getFullYear()); }
+    else return null;
+    // Round-trip through a real Date so 31/02 and friends are rejected.
+    var probe = new Date(Number(yyyy), Number(mm) - 1, Number(dd));
+    if(probe.getFullYear() !== Number(yyyy) ||
+       probe.getMonth() !== Number(mm) - 1 ||
+       probe.getDate() !== Number(dd)) return null;
+    return yyyy + "-" + mm + "-" + dd;
+  }
+  function maskDate(raw){
+    var d = digitsOf(raw).slice(0,8);
+    if(d.length > 4) return d.slice(0,2) + "/" + d.slice(2,4) + "/" + d.slice(4);
+    if(d.length > 2) return d.slice(0,2) + "/" + d.slice(2);
+    return d;
+  }
+  function displayDate(iso){
+    if(!isValidDateStr(iso)) return "";
+    var parts = iso.split("-");
+    return parts[2] + "/" + parts[1] + "/" + parts[0];
+  }
+
+  // ---- field accessors used everywhere else in the app ----
+  // getDateField/getTimeField return the stored form ("YYYY-MM-DD" / "HH:MM")
+  // or "" when the box is empty, or null when what's typed isn't a real
+  // date/time - so callers can tell "nothing entered" from "entered wrong".
+  function getDateField(id){
+    var el = document.getElementById(id);
+    if(!el.value.trim()) return "";
+    return normalizeDate(el.value);
+  }
+  function setDateField(id, iso){
+    var el = document.getElementById(id);
+    el.value = iso ? displayDate(iso) : "";
+    el.classList.remove("invalid");
+  }
+  function getTimeField(id){
+    var el = document.getElementById(id);
+    if(!el.value.trim()) return "";
+    return normalizeTime(el.value);
+  }
+  function setTimeField(id, val){
+    var el = document.getElementById(id);
+    el.value = val || "";
+    el.classList.remove("invalid");
+  }
+
+  // Mask while typing; tidy up and flag bad input on the way out.
+  function wireFormattedField(id, mask, normalize, onSettled){
+    var el = document.getElementById(id);
+    if(!el) return;
+    el.addEventListener("input", function(){
+      var masked = mask(el.value);
+      if(masked !== el.value) el.value = masked;
+      el.classList.remove("invalid");
+    });
+    el.addEventListener("blur", function(){
+      if(!el.value.trim()){ el.classList.remove("invalid"); if(onSettled) onSettled(); return; }
+      var normalized = normalize(el.value);
+      if(normalized === null){
+        el.classList.add("invalid");
+      } else {
+        el.classList.remove("invalid");
+        el.value = (normalize === normalizeDate) ? displayDate(normalized) : normalized;
+      }
+      if(onSettled) onSettled();
+    });
+  }
+
+  wireFormattedField("logDate", maskDate, normalizeDate, function(){ renderLog(); });
+  wireFormattedField("logEventDate", maskDate, normalizeDate);
+  wireFormattedField("logEventStart", maskTime, normalizeTime);
+  wireFormattedField("logEventEnd", maskTime, normalizeTime);
+
+  // ================= EVENT CALENDAR (admins only) =================
+  // A month-grid view of every logged entry whose item is in the "Event"
+  // category. It reads straight from data.entries - there is no separate
+  // list of events to keep in sync - so anything logged on the Log Drinks
+  // tab appears here immediately, and anything deleted disappears.
+
+  var calState = { year: null, month: null, selected: null };
+
+  function calMonthNames(){ return t("calendar_months").split(","); }
+  function calWeekdayNames(){ return t("calendar_weekdays_short").split(","); }
+
+  // "2026-09-04" -> local Date at midnight (never via new Date(str), which
+  // parses a bare date as UTC and can shift the day in our timezone).
+  function dateFromStr(str){
+    var parts = String(str).split("-");
+    return new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+  }
+  function dateToStr(d){
+    return d.getFullYear() + "-" + pad(d.getMonth()+1) + "-" + pad(d.getDate());
+  }
+  function isValidDateStr(str){
+    return /^\d{4}-\d{2}-\d{2}$/.test(String(str || ""));
+  }
+
+  function eventEntries(){
+    return data.entries.filter(function(e){
+      return e.category === "Event" && isValidDateStr(e.eventDate);
+    });
+  }
+  function eventsOnDate(dateStr){
+    return eventEntries()
+      .filter(function(e){ return e.eventDate === dateStr; })
+      .sort(function(a,b){
+        var as = a.eventStart || "99:99", bs = b.eventStart || "99:99";
+        if(as !== bs) return as < bs ? -1 : 1;
+        return a.ts - b.ts;
+      });
+  }
+
+  function ensureCalState(){
+    if(calState.year === null || calState.month === null){
+      var now = new Date();
+      calState.year = now.getFullYear();
+      calState.month = now.getMonth();
+    }
+  }
+
+  function renderCalendar(){
+    var grid = document.getElementById("calGrid");
+    if(!grid) return;               // calendar markup not present
+    if(!canManageStaff()) return;   // staff accounts never see this view
+    ensureCalState();
+
+    var year = calState.year, month = calState.month;
+    var monthNames = calMonthNames();
+    document.getElementById("calMonthLabel").textContent =
+      (monthNames[month] || (month+1)) + " " + year;
+
+    // In Hebrew the whole toolbar is mirrored, so "previous" sits on the
+    // right and needs the arrow that points right (and the reverse in English).
+    // These are the solid triangles U+25C0 / U+25B6 on purpose: the angle
+    // quotes < and > are bidi-mirrored characters, which the browser flips
+    // by itself on a right-to-left page - so flipping them here as well
+    // cancelled out and left them pointing the wrong way. Triangles aren't
+    // mirrored, so this is the only flip that happens.
+    var rtl = document.documentElement.dir === "rtl";
+    document.getElementById("btnCalPrev").textContent = rtl ? "\u25B6" : "\u25C0";
+    document.getElementById("btnCalNext").textContent = rtl ? "\u25C0" : "\u25B6";
+
+    // Weekday header row (Sunday-first, which is how the week runs here).
+    var weekdaysBox = document.getElementById("calWeekdays");
+    weekdaysBox.innerHTML = "";
+    calWeekdayNames().forEach(function(name){
+      var cell = document.createElement("div");
+      cell.className = "cal-weekday";
+      cell.textContent = name;
+      weekdaysBox.appendChild(cell);
+    });
+
+    // Count this month's events per day in one pass.
+    var monthPrefix = year + "-" + pad(month+1);
+    var countByDate = {};
+    var monthTotal = 0;
+    eventEntries().forEach(function(e){
+      if(e.eventDate.slice(0,7) !== monthPrefix) return;
+      countByDate[e.eventDate] = (countByDate[e.eventDate] || 0) + 1;
+      monthTotal++;
+    });
+    document.getElementById("calEmptyMonth").style.display = monthTotal ? "none" : "block";
+
+    var firstWeekday = new Date(year, month, 1).getDay();      // 0 = Sunday
+    var daysInMonth  = new Date(year, month+1, 0).getDate();
+    var todayS = todayStr();
+
+    grid.innerHTML = "";
+    for(var i = 0; i < firstWeekday; i++){
+      var blank = document.createElement("div");
+      blank.className = "cal-day empty";
+      grid.appendChild(blank);
+    }
+    for(var day = 1; day <= daysInMonth; day++){
+      (function(day){
+        var dateStr = year + "-" + pad(month+1) + "-" + pad(day);
+        var count = countByDate[dateStr] || 0;
+        var cell = document.createElement("div");
+        cell.className = "cal-day" +
+          (count ? " has-events" : "") +
+          (dateStr === todayS ? " today" : "") +
+          (dateStr === calState.selected ? " selected" : "");
+        cell.setAttribute("role", "button");
+        cell.setAttribute("tabindex", "0");
+
+        var num = document.createElement("div");
+        num.className = "cal-day-num";
+        num.textContent = day;
+        cell.appendChild(num);
+
+        if(count){
+          var badge = document.createElement("div");
+          badge.className = "cal-day-count";
+          badge.textContent = count;
+          cell.appendChild(badge);
+
+          // Names of the first couple of events, so the month view is
+          // readable at a glance without clicking into each day.
+          var names = document.createElement("div");
+          names.className = "cal-day-names";
+          var dayEvents = eventsOnDate(dateStr);
+          dayEvents.slice(0,2).forEach(function(e){
+            var line = document.createElement("div");
+            line.className = "cal-day-name";
+            line.textContent = (e.eventStart ? e.eventStart + " " : "") + e.itemName;
+            names.appendChild(line);
+          });
+          if(dayEvents.length > 2){
+            var more = document.createElement("div");
+            more.className = "cal-day-name muted";
+            more.textContent = "+" + (dayEvents.length - 2);
+            names.appendChild(more);
+          }
+          cell.appendChild(names);
+        }
+
+        function selectDay(){
+          calState.selected = dateStr;
+          renderCalendar();
+        }
+        cell.addEventListener("click", selectDay);
+        cell.addEventListener("keydown", function(ev){
+          if(ev.key === "Enter" || ev.key === " "){ ev.preventDefault(); selectDay(); }
+        });
+        grid.appendChild(cell);
+      })(day);
+    }
+
+    renderCalendarDay();
+  }
+
+  function renderCalendarDay(){
+    var box = document.getElementById("calDayBox");
+    var title = document.getElementById("calDayTitle");
+    if(!box) return;
+
+    if(!calState.selected){
+      title.textContent = t("calendar_day_title");
+      box.innerHTML = '<p class="muted">' + escapeHtml(t("calendar_pick_a_day")) + '</p>';
+      return;
+    }
+
+    title.textContent = t("calendar_day_title_for", {date: displayDate(calState.selected)});
+    var dayEvents = eventsOnDate(calState.selected);
+    if(dayEvents.length === 0){
+      box.innerHTML = '<p class="muted">' + escapeHtml(t("calendar_no_events_day")) + '</p>';
+      return;
+    }
+
+    box.innerHTML = "";
+    var table = document.createElement("table");
+    table.innerHTML =
+      '<thead><tr>' +
+        '<th>' + escapeHtml(t("calendar_th_time")) + '</th>' +
+        '<th>' + escapeHtml(t("calendar_th_event")) + '</th>' +
+        '<th>' + escapeHtml(t("calendar_th_member")) + '</th>' +
+        '<th>' + escapeHtml(t("calendar_th_qty")) + '</th>' +
+        '<th>' + escapeHtml(t("calendar_th_total")) + '</th>' +
+        '<th>' + escapeHtml(t("calendar_th_logged_by")) + '</th>' +
+        '<th></th>' +
+      '</tr></thead><tbody></tbody>';
+    var tbody = table.querySelector("tbody");
+
+    dayEvents.forEach(function(e){
+      var member = data.members.find(function(m){ return m.id === e.memberId; });
+      var timeText = timeRangeText(e.eventStart, e.eventEnd, true) || t("calendar_no_time");
+      var tr = document.createElement("tr");
+      tr.innerHTML =
+        '<td>' + escapeHtml(timeText) + '</td>' +
+        '<td>' + escapeHtml(e.itemName) + escapeHtml(entryExtrasSuffix(e)) + '</td>' +
+        '<td>' + escapeHtml(member ? (member.name + " (#" + member.number + ")") : t("removed_member")) + '</td>' +
+        '<td>' + e.qty + '</td>' +
+        '<td>' + currency() + money(entryLineTotal(e)) + '</td>' +
+        '<td>' + escapeHtml(e.loggedBy || "-") + '<br><span class="muted">' +
+          escapeHtml(t("calendar_logged_on", {date: displayDate(e.date)})) + '</span></td>' +
+        '<td></td>';
+
+      var delBtn = document.createElement("button");
+      delBtn.className = "small";
+      delBtn.textContent = t("btn_delete");
+      delBtn.onclick = function(){
+        if(!requireAdmin()) return;
+        if(!confirm(t("calendar_delete_confirm"))) return;
+        // Events don't hold stock, so nothing is returned to the menu here.
+        data.entries = data.entries.filter(function(x){ return x.id !== e.id; });
+        save();
+        renderCalendar();
+        renderLog();
+      };
+      tr.children[6].appendChild(delBtn);
+      tbody.appendChild(tr);
+    });
+
+    box.appendChild(table);
+  }
+
+  function calShiftMonth(delta){
+    ensureCalState();
+    var d = new Date(calState.year, calState.month + delta, 1);
+    calState.year = d.getFullYear();
+    calState.month = d.getMonth();
+    renderCalendar();
+  }
+
+  (function wireCalendarControls(){
+    var prev = document.getElementById("btnCalPrev");
+    if(!prev) return;
+    prev.addEventListener("click", function(){ calShiftMonth(-1); });
+    document.getElementById("btnCalNext").addEventListener("click", function(){ calShiftMonth(1); });
+    document.getElementById("btnCalToday").addEventListener("click", function(){
+      var now = new Date();
+      calState.year = now.getFullYear();
+      calState.month = now.getMonth();
+      calState.selected = todayStr();
+      renderCalendar();
+    });
+  })();
+
+
+  // ================= CONFIRM-DELETE DIALOG =================
+  // A small in-app dialog instead of confirm(), because deleting a billed
+  // entry needs a third answer beyond yes/no: whether the stock it used
+  // should go back on the shelf. An old entry usually should NOT - the
+  // bottle really was poured back then - so the box starts unticked.
+
+  var pendingDelete = null;   // {entry, onConfirm}
+
+  function closeConfirmDialog(){
+    document.getElementById("confirmOverlay").style.display = "none";
+    pendingDelete = null;
+  }
+
+  // entry: the entry being removed. onConfirm(restoreStock) runs if they go ahead.
+  function askDeleteEntry(entry, onConfirm){
+    var member = data.members.find(function(m){ return m.id === entry.memberId; });
+    var item = data.items.find(function(x){ return x.id === entry.itemId; });
+    var stockable = entry.category !== "Event" && !!item;
+
+    document.getElementById("confirmBody").textContent = t("confirm_delete_body", {
+      item: entry.itemName + entryExtrasSuffix(entry),
+      qty: entry.qty,
+      member: member ? member.name : t("removed_member"),
+      date: displayDate(entry.date) || entry.date,
+      total: currency() + money(entryLineTotal(entry))
+    });
+
+    var stockField = document.getElementById("confirmStockField");
+    var stockBox = document.getElementById("confirmStockBack");
+    stockBox.checked = false;
+    stockField.style.display = stockable ? "" : "none";
+    if(stockable){
+      document.getElementById("confirmStockLabel").textContent =
+        t("confirm_delete_stock", {n: entry.qty, item: item.name});
+    }
+
+    pendingDelete = { entry: entry, onConfirm: onConfirm };
+    document.getElementById("confirmOverlay").style.display = "flex";
+    document.getElementById("btnConfirmCancel").focus();
+  }
+
+  document.getElementById("btnConfirmCancel").addEventListener("click", closeConfirmDialog);
+  document.getElementById("btnConfirmDelete").addEventListener("click", function(){
+    if(!pendingDelete) return;
+    var job = pendingDelete;
+    var restoreStock = document.getElementById("confirmStockBack").checked &&
+                       document.getElementById("confirmStockField").style.display !== "none";
+    closeConfirmDialog();
+    job.onConfirm(restoreStock);
+  });
+  // Clicking the dark backdrop, or Esc, cancels - never deletes.
+  document.getElementById("confirmOverlay").addEventListener("click", function(ev){
+    if(ev.target === this) closeConfirmDialog();
+  });
+  document.addEventListener("keydown", function(ev){
+    if(ev.key === "Escape" && pendingDelete) closeConfirmDialog();
+  });
+
+  // Removes an entry everywhere it shows up, optionally putting its stock back.
+  function deleteEntry(entry, restoreStock){
+    if(restoreStock && entry.category !== "Event"){
+      var item = data.items.find(function(x){ return x.id === entry.itemId; });
+      if(item) item.stock += entry.qty;
+    }
+    data.entries = data.entries.filter(function(x){ return x.id !== entry.id; });
+    save();
   }
 
   // ================= REPORTS =================
@@ -1150,6 +1624,7 @@
       tbody.innerHTML = '<tr><td colspan="5" class="muted">'+t(rows.length===0 ? "no_entries_month" : "no_matching_members")+'</td></tr>';
     }
     document.getElementById("reportDetailBox").innerHTML = "";
+    openDetail = null;
 
     tbody.querySelectorAll("button[data-mid]").forEach(function(btn){
       btn.addEventListener("click", function(){
@@ -1160,19 +1635,51 @@
 
   document.getElementById("searchReport").addEventListener("input", renderReport);
 
+  // Remembers which member's breakdown is open, so the panel can be rebuilt
+  // in place after a deletion instead of collapsing back to the summary.
+  var openDetail = null;   // {monthStr, memberId}
+
   function showMemberDetail(monthStr, memberId){
+    openDetail = { monthStr: monthStr, memberId: memberId };
     var entries = monthEntries(monthStr).filter(function(e){return e.memberId===memberId;})
       .sort(function(a,b){return a.ts-b.ts;});
     var member = data.members.find(function(m){return m.id===memberId;});
     var box = document.getElementById("reportDetailBox");
     var label = member ? (member.number + " - " + member.name) : t("removed_member");
+    // Removing a line changes a bill the accountant may already have, so
+    // only admins get the delete column - staff still fix same-day
+    // mistakes on the Log Drinks tab.
+    var canDelete = canManageStaff();
+
     var html = '<h3 style="margin-top:20px;">'+escapeHtml(label)+t("detail_heading_suffix")+'</h3>';
-    html += '<table><thead><tr><th>'+t("th_date")+'</th><th>'+t("th_item")+'</th><th>'+t("th_qty")+'</th><th>'+t("th_unit_price")+'</th><th>'+t("th_line_total")+'</th><th>'+t("th_logged_by")+'</th></tr></thead><tbody>';
+    html += '<table><thead><tr><th>'+t("th_date")+'</th><th>'+t("th_item")+'</th><th>'+t("th_qty")+'</th><th>'+t("th_unit_price")+'</th><th>'+t("th_line_total")+'</th><th>'+t("th_logged_by")+'</th>'+(canDelete ? '<th></th>' : '')+'</tr></thead><tbody>';
     entries.forEach(function(e){
-      html += '<tr><td>'+e.date+'</td><td>'+escapeHtml(e.itemName)+escapeHtml(entryExtrasSuffix(e))+escapeHtml(entryEventSuffix(e))+'</td><td>'+e.qty+'</td><td>'+currency()+money(e.unitPrice)+'</td><td>'+currency()+money(entryLineTotal(e))+'</td><td>'+escapeHtml(e.loggedBy||"-")+'</td></tr>';
+      html += '<tr><td>'+displayDate(e.date)+'</td><td>'+escapeHtml(e.itemName)+escapeHtml(entryExtrasSuffix(e))+escapeHtml(entryEventSuffix(e))+'</td><td>'+e.qty+'</td><td>'+currency()+money(e.unitPrice)+'</td><td>'+currency()+money(entryLineTotal(e))+'</td><td>'+escapeHtml(e.loggedBy||"-")+'</td>'+
+        (canDelete ? '<td><button class="small" data-entry-id="'+escapeHtml(e.id)+'">'+escapeHtml(t("btn_delete"))+'</button></td>' : '')+'</tr>';
     });
     html += '</tbody></table>';
+    if(entries.length === 0){
+      html += '<p class="muted">'+escapeHtml(t("no_entries_month"))+'</p>';
+    }
     box.innerHTML = html;
+
+    if(!canDelete) return;
+    box.querySelectorAll("button[data-entry-id]").forEach(function(btn){
+      btn.addEventListener("click", function(){
+        if(!requireAdmin()) return;
+        var entry = data.entries.find(function(x){ return x.id === btn.dataset.entryId; });
+        if(!entry) return;
+        askDeleteEntry(entry, function(restoreStock){
+          deleteEntry(entry, restoreStock);
+          // Refresh everywhere this entry could have been showing.
+          renderReport();
+          showMemberDetail(monthStr, memberId);
+          renderLog();
+          renderMenu();
+          renderCalendar();
+        });
+      });
+    });
   }
 
   document.getElementById("btnShowReport").addEventListener("click", renderReport);
@@ -1208,7 +1715,7 @@
     out.push([t("th_date"), t("th_member_num"), t("th_member"), t("th_item"), t("th_category"), t("th_qty"), t("th_unit_price"), t("th_line_total"), t("th_logged_by")]);
     entries.forEach(function(e){
       var member = data.members.find(function(m){return m.id===e.memberId;});
-      out.push([e.date, member?member.number:"", member?member.name:t("removed_member"), e.itemName + entryExtrasSuffix(e) + entryEventSuffix(e), e.category, e.qty, money(e.unitPrice), money(entryLineTotal(e)), e.loggedBy||""]);
+      out.push([e.date, member?member.number:"", member?member.name:t("removed_member"), e.itemName + entryExtrasSuffix(e) + entryEventSuffix(e, false), e.category, e.qty, money(e.unitPrice), money(entryLineTotal(e)), e.loggedBy||""]);
     });
     downloadCsv("stable-pub-detailed-" + monthStr + ".csv", out);
   });
@@ -1244,7 +1751,7 @@
       infoLine.textContent = t("backup_last", {date:last, n:days});
     }
 
-    if(days >= BACKUP_REMINDER_DAYS){
+    if(days >= BACKUP_REMINDER_DAYS && canManageStaff()){
       reminder.style.display = "block";
       reminderText.textContent = !last ? t("backup_reminder_never") : t("backup_reminder_overdue", {n:days});
     } else {
@@ -1343,7 +1850,7 @@
           sessionStorage.removeItem(SESSION_KEY);
           save();
           renderMembers(); renderMenu(); renderLog();
-          renderBackupStatus(); renderStaff();
+          renderBackupStatus(); renderStaff(); renderCalendar();
           document.getElementById("reportTable").querySelector("tbody").innerHTML = "";
           alert(t("alert_backup_restored"));
           showLoginGateIfNeeded();
@@ -1356,7 +1863,7 @@
   });
 
   // ================= INIT =================
-  document.getElementById("logDate").value = todayStr();
+  setDateField("logDate", todayStr());
   var monthInput = document.getElementById("reportMonth");
   var now = new Date();
   monthInput.value = now.getFullYear() + "-" + pad(now.getMonth()+1);

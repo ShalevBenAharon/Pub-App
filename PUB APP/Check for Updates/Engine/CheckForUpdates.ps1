@@ -18,6 +18,56 @@ function Write-Log($msg) {
 
 Write-Log "---- Checking for updates ----"
 
+# GitHub refuses anything below TLS 1.2, but Windows PowerShell 5.1 still
+# negotiates TLS 1.0 first on some machines. When that happens the request
+# doesn't fail cleanly - it hangs until the timeout, which looks exactly like
+# "no internet" in the log. Ask for the modern protocols up front.
+try {
+    $protocols = [Net.SecurityProtocolType]::Tls12
+    if ([enum]::GetNames([Net.SecurityProtocolType]) -contains "Tls13") {
+        $protocols = $protocols -bor [Net.SecurityProtocolType]::Tls13
+    }
+    [Net.ServicePointManager]::SecurityProtocol = $protocols
+}
+catch { Write-Log "NOTE: could not raise TLS version: $($_.Exception.Message)" }
+
+# If Windows is set up to go through a proxy, sign in to it as the logged-in
+# user - otherwise the request can stall waiting for credentials nobody types.
+try {
+    if ([Net.WebRequest]::DefaultWebProxy) {
+        [Net.WebRequest]::DefaultWebProxy.Credentials = [Net.CredentialCache]::DefaultCredentials
+    }
+}
+catch { }
+
+# One slow moment on the pub's wifi shouldn't abandon the whole update, so
+# each request gets three tries and a more forgiving timeout than before.
+function Invoke-Download($uri, $outFile) {
+    $attempt = 0
+    while ($true) {
+        $attempt++
+        try {
+            if ($outFile) {
+                Invoke-WebRequest -Uri $uri -OutFile $outFile -UseBasicParsing -TimeoutSec 30
+                return $null
+            }
+            return (Invoke-WebRequest -Uri $uri -UseBasicParsing -TimeoutSec 30).Content
+        }
+        catch {
+            if ($attempt -ge 3) { throw }
+            Write-Log "Attempt $attempt failed ($($_.Exception.Message)) - retrying..."
+            Start-Sleep -Seconds 3
+        }
+    }
+}
+
+# "1.0.10" is newer than "1.0.9", which plain text comparison gets wrong.
+function ConvertTo-VersionOrNull($text) {
+    $parsed = $null
+    if ([version]::TryParse(($text -replace '[^0-9\.]', ''), [ref]$parsed)) { return $parsed }
+    return $null
+}
+
 if (-not (Test-Path $configPath)) {
     Write-Host ""
     Write-Host "update-config.txt not found."
@@ -65,13 +115,19 @@ Write-Log "Installed version: $localVersion"
 # ---- Check the remote version, failing gracefully if there's no internet ----
 try {
     $versionUrl = $baseUrl + (ConvertTo-UrlPath "Check for Updates/Engine/version.txt")
-    $remoteVersion = (Invoke-WebRequest -Uri $versionUrl -UseBasicParsing -TimeoutSec 10).Content.Trim()
+    $remoteVersion = (Invoke-Download $versionUrl).Trim()
 }
 catch {
     Write-Host ""
-    Write-Host "Couldn't check for updates (no internet connection, or the update"
-    Write-Host "server couldn't be reached - make sure the GitHub repository is set"
-    Write-Host "to Public). Nothing was changed. Try again later."
+    Write-Host "Couldn't check for updates. Nothing was changed."
+    Write-Host ""
+    Write-Host "The usual causes, in order of likelihood:"
+    Write-Host "  - no internet connection right now;"
+    Write-Host "  - a firewall or antivirus blocking PowerShell from reaching the web;"
+    Write-Host "  - the GitHub repository is not set to Public."
+    Write-Host ""
+    Write-Host "To test the connection yourself, open PowerShell and run:"
+    Write-Host "  Invoke-WebRequest -Uri '$versionUrl' -UseBasicParsing"
     Write-Log "ERROR checking version: $($_.Exception.Message)"
     Read-Host "Press Enter to close"
     exit
@@ -79,10 +135,34 @@ catch {
 
 Write-Log "Latest available version: $remoteVersion"
 
-if ($remoteVersion -eq $localVersion) {
+# Compare the parsed version numbers rather than the raw text, so a stray
+# byte-order mark or line ending in version.txt can't read as "different"
+# and trigger a pointless reinstall of the version already installed.
+$localParsed = ConvertTo-VersionOrNull $localVersion
+$remoteParsed = ConvertTo-VersionOrNull $remoteVersion
+$upToDate = if ($localParsed -and $remoteParsed) { $remoteParsed -eq $localParsed }
+            else { $remoteVersion -eq $localVersion }
+
+if ($upToDate) {
     Write-Host ""
     Write-Host "You're already up to date (version $localVersion)."
     Write-Log "Already up to date."
+    Read-Host "Press Enter to close"
+    exit
+}
+
+# Only ever move forwards. Without this, ANY difference counted as "an update
+# is available" - so a maintainer whose local copy was ahead of GitHub would
+# have their unpublished work overwritten by the older published copy.
+if ($localParsed -and $remoteParsed -and $remoteParsed -lt $localParsed) {
+    Write-Host ""
+    Write-Host "This copy (version $localVersion) is NEWER than the published one"
+    Write-Host "(version $remoteVersion), so there is nothing to install - updating"
+    Write-Host "would replace your newer files with older ones."
+    Write-Host ""
+    Write-Host "If you're the maintainer: commit and push your changes to GitHub"
+    Write-Host "first, then this check will go quiet again."
+    Write-Log "Local version $localVersion is newer than published $remoteVersion - refusing to downgrade."
     Read-Host "Press Enter to close"
     exit
 }
@@ -132,7 +212,7 @@ foreach ($relPath in $filesToSync) {
     $url = $baseUrl + (ConvertTo-UrlPath $relPath)
     $tempFile = Join-Path $tempDir ([guid]::NewGuid().ToString("N"))
     try {
-        Invoke-WebRequest -Uri $url -OutFile $tempFile -UseBasicParsing -TimeoutSec 20
+        Invoke-Download $url $tempFile | Out-Null
         $downloaded[$relPath] = $tempFile
     }
     catch {

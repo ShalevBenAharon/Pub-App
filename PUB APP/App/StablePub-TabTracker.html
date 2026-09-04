@@ -25,6 +25,22 @@
   </div>
 </div>
 
+<div id="confirmOverlay" class="modal-overlay" style="display:none;">
+  <div class="modal-box">
+    <h2 id="confirmTitle" data-i18n="confirm_delete_title">Delete this entry?</h2>
+    <p id="confirmBody"></p>
+    <p class="muted" data-i18n="confirm_delete_note">It will also disappear from the day it was logged on.</p>
+    <label class="checkbox-label" id="confirmStockField" style="display:none;">
+      <input type="checkbox" id="confirmStockBack">
+      <span id="confirmStockLabel"></span>
+    </label>
+    <div class="modal-actions">
+      <button class="btn secondary" id="btnConfirmCancel" data-i18n="btn_cancel">Cancel</button>
+      <button class="btn danger" id="btnConfirmDelete" data-i18n="btn_delete">Delete</button>
+    </div>
+  </div>
+</div>
+
 <header>
   <button id="btnLangToggle" class="lang-toggle" type="button">English</button>
   <div id="userBadge" class="user-badge" style="display:none;">
@@ -39,6 +55,7 @@
   <button data-view="log" class="active" data-i18n="nav_log">Log Drinks</button>
   <button data-view="members" data-i18n="nav_members">Members</button>
   <button data-view="menu" data-i18n="nav_menu">Menu &amp; Prices</button>
+  <button data-view="calendar" data-i18n="nav_calendar">Event Calendar</button>
   <button data-view="reports" data-i18n="nav_reports">Monthly Report</button>
   <button data-view="backup" data-i18n="nav_backup">Backup &amp; Data</button>
   <button data-view="staff" data-i18n="nav_staff">Staff</button>
@@ -58,7 +75,7 @@
       <div class="row">
         <div class="field">
           <label data-i18n="label_date">Date</label>
-          <input type="date" id="logDate">
+          <input type="text" id="logDate" class="fld-date" inputmode="numeric" maxlength="10" autocomplete="off" placeholder="dd/mm/yyyy">
         </div>
         <div class="field">
           <label data-i18n="label_search_member">Search Member</label>
@@ -85,15 +102,15 @@
         </div>
         <div class="field" id="logEventDateField" style="display:none;">
           <label data-i18n="label_event_date">Event Date</label>
-          <input type="date" id="logEventDate">
+          <input type="text" id="logEventDate" class="fld-date" inputmode="numeric" maxlength="10" autocomplete="off" placeholder="dd/mm/yyyy">
         </div>
         <div class="field" id="logEventStartField" style="display:none;">
           <label data-i18n="label_event_start">Start Time</label>
-          <input type="time" id="logEventStart">
+          <input type="text" id="logEventStart" class="fld-time" inputmode="numeric" maxlength="5" autocomplete="off" placeholder="HH:MM">
         </div>
         <div class="field" id="logEventEndField" style="display:none;">
           <label data-i18n="label_event_end">End Time</label>
-          <input type="time" id="logEventEnd">
+          <input type="text" id="logEventEnd" class="fld-time" inputmode="numeric" maxlength="5" autocomplete="off" placeholder="HH:MM">
         </div>
         <div class="field">
           <label data-i18n="label_line_price">Price</label>
@@ -222,6 +239,28 @@
         <tbody></tbody>
       </table>
       <p class="muted" data-i18n="menu_note">Changing a price only affects new entries added from now on &mdash; past nights keep the price that was charged at the time. Stock goes down automatically when a sale is logged, and comes back if you delete that entry.</p>
+    </div>
+  </section>
+
+  <!-- CALENDAR VIEW (admins only) -->
+  <section id="view-calendar" class="view">
+    <div class="card">
+      <h2 data-i18n="calendar_title">Event Calendar</h2>
+      <p class="muted" data-i18n="calendar_desc">Every event logged on the Log Drinks tab shows up here on its event date. Click a day to see its events.</p>
+      <div class="cal-toolbar">
+        <button class="btn secondary small" id="btnCalPrev" type="button">&#9664;</button>
+        <span id="calMonthLabel" class="cal-month-label"></span>
+        <button class="btn secondary small" id="btnCalNext" type="button">&#9654;</button>
+        <button class="btn small" id="btnCalToday" type="button" data-i18n="calendar_today">Today</button>
+      </div>
+      <div class="cal-weekdays" id="calWeekdays"></div>
+      <div class="cal-grid" id="calGrid"></div>
+      <p class="muted" id="calEmptyMonth" style="display:none;" data-i18n="calendar_no_events_month">No events are booked this month.</p>
+    </div>
+
+    <div class="card">
+      <h2 id="calDayTitle" data-i18n="calendar_day_title">Events on the Selected Day</h2>
+      <div id="calDayBox"></div>
     </div>
   </section>
 

@@ -314,3 +314,160 @@ footer{
   font-size:.95em;
 }
 .checkbox-label input{margin:0;}
+
+/* ---------- Event calendar ---------- */
+.cal-toolbar{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  margin-bottom:12px;
+  flex-wrap:wrap;
+}
+.cal-month-label{
+  font-weight:bold;
+  font-size:1.05em;
+  color:var(--wood-dark);
+  min-width:150px;
+  text-align:center;
+}
+.cal-toolbar button.btn.small{
+  padding:4px 12px;
+  font-size:.9em;
+}
+.cal-weekdays,
+.cal-grid{
+  display:grid;
+  grid-template-columns:repeat(7,1fr);
+  gap:4px;
+}
+.cal-weekdays{margin-bottom:4px;}
+.cal-weekday{
+  text-align:center;
+  font-size:.75em;
+  text-transform:uppercase;
+  letter-spacing:.4px;
+  color:var(--muted);
+  padding:4px 0;
+}
+.cal-day{
+  min-height:74px;
+  border:1px solid var(--border);
+  border-radius:6px;
+  background:#fff;
+  padding:4px 5px;
+  cursor:pointer;
+  overflow:hidden;
+  position:relative;
+}
+.cal-day:hover{background:#faf4e6;}
+.cal-day:focus-visible{outline:2px solid var(--gold);outline-offset:1px;}
+.cal-day.empty{
+  background:transparent;
+  border:1px solid transparent;
+  cursor:default;
+}
+.cal-day.empty:hover{background:transparent;}
+.cal-day-num{
+  font-size:.85em;
+  font-weight:bold;
+  color:var(--wood-dark);
+}
+.cal-day.today{border-color:var(--gold);box-shadow:inset 0 0 0 1px var(--gold);}
+.cal-day.has-events{background:#fbf0d9;}
+.cal-day.has-events:hover{background:#f7e6c4;}
+.cal-day.selected{
+  border-color:var(--wood);
+  box-shadow:inset 0 0 0 2px var(--wood);
+}
+.cal-day-count{
+  position:absolute;
+  top:4px;
+  inset-inline-end:5px;
+  background:var(--gold);
+  color:#2b1d14;
+  font-size:.7em;
+  font-weight:bold;
+  border-radius:9px;
+  min-width:17px;
+  height:17px;
+  line-height:17px;
+  text-align:center;
+  padding:0 4px;
+}
+.cal-day-names{margin-top:3px;}
+.cal-day-name{
+  font-size:.72em;
+  color:var(--wood-dark);
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  line-height:1.35;
+}
+@media (max-width:640px){
+  .cal-day{min-height:56px;}
+  .cal-day-names{display:none;}
+}
+
+/* ---------- Typed date / time boxes ---------- */
+/* These replace the native date & time pickers, whose layout Chrome picks
+   from its own language setting (that's where the AM/PM slot came from).
+   Kept left-to-right even on the Hebrew page, since they're all digits. */
+.fld-date,
+.fld-time{
+  direction:ltr;
+  text-align:left;
+  font-variant-numeric:tabular-nums;
+  letter-spacing:.5px;
+}
+.fld-date{width:110px;}
+.fld-time{width:80px;}
+.fld-date.invalid,
+.fld-time.invalid{
+  border-color:var(--danger);
+  background:#fdf0f0;
+}
+
+/* ---------- Confirm dialog ---------- */
+/* Shares the look of the sign-in box, but needs a third answer beyond
+   yes/no (whether stock goes back), which confirm() can't give. */
+.modal-overlay{
+  position:fixed;
+  inset:0;
+  background:rgba(43,29,20,.85);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  z-index:1000;
+  padding:20px;
+}
+.modal-box{
+  background:var(--panel);
+  border:1px solid var(--border);
+  border-radius:10px;
+  padding:24px 28px;
+  width:420px;
+  max-width:100%;
+  box-shadow:0 8px 30px rgba(0,0,0,.4);
+}
+.modal-box h2{
+  margin-top:0;
+  color:var(--wood-dark);
+  font-size:1.15em;
+  border-bottom:2px solid var(--gold-light);
+  padding-bottom:8px;
+}
+.modal-box p{margin:10px 0;font-size:.95em;line-height:1.5;}
+.modal-box .checkbox-label{
+  background:#fbf0d9;
+  border:1px solid var(--gold-light);
+  border-radius:6px;
+  padding:10px 12px;
+  margin:14px 0 4px;
+  font-size:.9em;
+}
+.modal-actions{
+  display:flex;
+  gap:10px;
+  justify-content:flex-end;
+  margin-top:18px;
+}
