@@ -40,6 +40,22 @@ try {
 }
 catch { }
 
+# Some networks advertise IPv6 without actually routing it. Browsers cope -
+# they race both and abandon IPv6 in a quarter of a second - but PowerShell's
+# Invoke-WebRequest tries IPv6 first and then just waits for the timeout, so
+# the update check appears to have "no internet" on a connection that's fine.
+# Windows ships curl.exe (Windows 10 1803 and later), and "curl -4" simply
+# asks for IPv4, which sidesteps the whole problem. Invoke-WebRequest stays as
+# the fallback for older machines.
+$script:CurlPath = $null
+try {
+    $found = Get-Command curl.exe -ErrorAction SilentlyContinue
+    if ($found) { $script:CurlPath = $found.Source }
+}
+catch { }
+if ($script:CurlPath) { Write-Log "Using curl.exe (IPv4) for downloads." }
+else { Write-Log "curl.exe not found - falling back to Invoke-WebRequest." }
+
 # One slow moment on the pub's wifi shouldn't abandon the whole update, so
 # each request gets three tries and a more forgiving timeout than before.
 function Invoke-Download($uri, $outFile) {
@@ -47,6 +63,16 @@ function Invoke-Download($uri, $outFile) {
     while ($true) {
         $attempt++
         try {
+            if ($script:CurlPath) {
+                if ($outFile) {
+                    $null = & $script:CurlPath -4 -sS --fail --location --max-time 30 -o $outFile $uri 2>&1
+                    if ($LASTEXITCODE -ne 0) { throw "curl exit code $LASTEXITCODE" }
+                    return $null
+                }
+                $body = & $script:CurlPath -4 -sS --fail --location --max-time 30 $uri 2>&1
+                if ($LASTEXITCODE -ne 0) { throw "curl exit code $LASTEXITCODE ($body)" }
+                return ($body -join "`n")
+            }
             if ($outFile) {
                 Invoke-WebRequest -Uri $uri -OutFile $outFile -UseBasicParsing -TimeoutSec 30
                 return $null
@@ -123,6 +149,7 @@ catch {
     Write-Host ""
     Write-Host "The usual causes, in order of likelihood:"
     Write-Host "  - no internet connection right now;"
+    Write-Host "  - this network advertises IPv6 but doesn't actually route it;"
     Write-Host "  - a firewall or antivirus blocking PowerShell from reaching the web;"
     Write-Host "  - the GitHub repository is not set to Public."
     Write-Host ""
@@ -191,6 +218,7 @@ $filesToSync = @(
     "Monthly Email Setup/Send Report Now (Test).bat",
     "Monthly Email Setup/email-config.EXAMPLE.txt",
     "Check for Updates/Check for Updates.bat",
+    "Check for Updates/Repair Updater.bat",
     "Check for Updates/update-config.EXAMPLE.txt",
     "Check for Updates/Engine/CheckForUpdates.ps1"
 )
@@ -202,8 +230,19 @@ $filesToSync = @(
 #   Check for Updates/Engine/UpdateLog.txt
 #   any stable-pub-backup-*.json files
 
-$tempDir = Join-Path $env:TEMP ("pubapp-update-" + [guid]::NewGuid().ToString("N"))
-New-Item -ItemType Directory -Path $tempDir | Out-Null
+# Fall back through a couple of scratch locations - if we can't get one at
+# all, stop here rather than "succeeding" with nothing downloaded.
+$tempRoot = if ($env:TEMP) { $env:TEMP } elseif ($env:TMP) { $env:TMP } else { $installRoot }
+$tempDir = Join-Path $tempRoot ("pubapp-update-" + [guid]::NewGuid().ToString("N"))
+try { New-Item -ItemType Directory -Path $tempDir -ErrorAction Stop | Out-Null }
+catch {
+    Write-Host ""
+    Write-Host "Couldn't create a temporary folder to download into, so nothing"
+    Write-Host "was changed. (Tried: $tempDir)"
+    Write-Log "ERROR creating temp folder: $($_.Exception.Message)"
+    Read-Host "Press Enter to close"
+    exit
+}
 
 $downloaded = @{}
 $failed = $false
@@ -230,15 +269,40 @@ if ($failed) {
     exit
 }
 
-# All files downloaded successfully - now install them.
+# All files downloaded successfully - now install them. Every copy is checked,
+# because silently reporting "updated" while nothing was written is worse than
+# reporting a failure: the version number would say the app is current when it
+# isn't, and the next check would go quiet about it forever.
+$installed = 0
 foreach ($relPath in $filesToSync) {
+    $source = $downloaded[$relPath]
+    if (-not $source -or -not (Test-Path $source)) {
+        Write-Host ""
+        Write-Host "Something went wrong installing '$relPath' - it never downloaded."
+        Write-Host "Stopping here. Run Check for Updates again."
+        Write-Log "ERROR: missing downloaded file for $relPath - aborted after $installed file(s)."
+        Read-Host "Press Enter to close"
+        exit
+    }
     $destPath = Join-Path $installRoot ($relPath -replace "/", [System.IO.Path]::DirectorySeparatorChar)
     $destFolder = Split-Path -Parent $destPath
     if (-not (Test-Path $destFolder)) { New-Item -ItemType Directory -Path $destFolder -Force | Out-Null }
-    Copy-Item -Path $downloaded[$relPath] -Destination $destPath -Force
+    try {
+        Copy-Item -Path $source -Destination $destPath -Force -ErrorAction Stop
+    }
+    catch {
+        Write-Host ""
+        Write-Host "Couldn't write '$relPath' - the update is incomplete."
+        Write-Host "Close the app if it's open, then run Check for Updates again."
+        Write-Log "ERROR installing $relPath : $($_.Exception.Message) - aborted after $installed file(s)."
+        Read-Host "Press Enter to close"
+        exit
+    }
+    $installed++
     Write-Log "Updated: $relPath"
 }
 
+# Only now, with every file actually on disk, record the new version.
 Set-Content -Path $versionPath -Value $remoteVersion
 Remove-Item -Path $tempDir -Recurse -Force -ErrorAction SilentlyContinue
 
