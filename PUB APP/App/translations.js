@@ -203,6 +203,7 @@ window.STABLE_PUB_I18N = {
     btn_saved: "Saved",
     alert_enter_valid_stock: "Enter a valid stock count.",
     confirm_delete_item: 'Delete item "{name}"?',
+    confirm_delete_item_used: 'Delete "{name}"? It was logged {n} time(s). Past bills and reports stay exactly as they are, but you will no longer be able to return stock when deleting those log lines.',
     alert_enter_item_name: "Enter an item name.",
     alert_enter_valid_starting_stock: "Enter a valid starting stock (0 or more).",
 
@@ -467,6 +468,7 @@ window.STABLE_PUB_I18N = {
     btn_saved: "נשמר",
     alert_enter_valid_stock: "הזינו כמות מלאי תקינה.",
     confirm_delete_item: 'למחוק את הפריט "{name}"?',
+    confirm_delete_item_used: 'למחוק את "{name}"? הפריט נרשם {n} פעמים. חשבונות קודמים ודוחות יישארו ללא שינוי, אך לא תהיה אפשרות להחזיר מלאי בעת מחיקת שורות אלו מהיומן.',
     alert_enter_item_name: "הזינו שם פריט.",
     alert_enter_valid_starting_stock: "הזינו מלאי התחלתי תקין (0 ומעלה).",
 

@@ -652,7 +652,6 @@
       if(a.category!==b.category) return a.category.localeCompare(b.category);
       return a.name.localeCompare(b.name);
     }).forEach(function(it){
-      var hasEntries = data.entries.some(function(e){return e.itemId===it.id;});
       var tr = document.createElement("tr");
       tr.innerHTML =
         '<td></td>'+
@@ -785,17 +784,19 @@
       toggleBtn.textContent = it.active ? t("btn_deactivate") : t("btn_activate");
       toggleBtn.onclick = function(){ it.active=!it.active; save(); renderMenu(); renderLog(); };
       actionsTd.appendChild(toggleBtn);
-      if(!hasEntries){
-        var delBtn = document.createElement("button");
-        delBtn.className="small"; delBtn.style.marginLeft="6px"; delBtn.textContent=t("btn_delete");
-        delBtn.onclick = function(){
-          if(confirm(t("confirm_delete_item", {name:it.name}))){
-            data.items = data.items.filter(function(x){return x.id!==it.id;});
-            save(); renderMenu(); renderLog();
-          }
-        };
-        actionsTd.appendChild(delBtn);
-      }
+      var delBtn = document.createElement("button");
+      delBtn.className="small"; delBtn.style.marginLeft="6px"; delBtn.textContent=t("btn_delete");
+      delBtn.onclick = function(){
+        var usedCount = data.entries.filter(function(e){return e.itemId===it.id;}).length;
+        var msg = usedCount > 0
+          ? t("confirm_delete_item_used", {name: it.name, n: usedCount})
+          : t("confirm_delete_item", {name: it.name});
+        if(confirm(msg)){
+          data.items = data.items.filter(function(x){return x.id!==it.id;});
+          save(); renderMenu(); renderLog();
+        }
+      };
+      actionsTd.appendChild(delBtn);
       tbody.appendChild(tr);
     });
   }
