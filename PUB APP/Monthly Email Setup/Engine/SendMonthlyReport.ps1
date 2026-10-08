@@ -104,7 +104,7 @@ foreach ($e in $monthEntries) {
     if (-not $byMember.ContainsKey($e.memberId)) {
         $byMember[$e.memberId] = [PSCustomObject]@{ Items = 0; Total = 0.0 }
     }
-    $byMember[$e.memberId].Items += $e.qty
+    if ($e.category -ne "Refund") { $byMember[$e.memberId].Items += $e.qty }
     $byMember[$e.memberId].Total += (Get-EntryLineTotal $e)
 }
 
@@ -148,7 +148,8 @@ $summaryLines.Add((Csv-Row @("Stable Pub Geva - Monthly Tab Summary - $targetMon
 $summaryLines.Add("")
 $summaryLines.Add((Csv-Row @("Member #", "Member", "Total Items", "Total Due ($currency)")))
 foreach ($r in $summaryRows) {
-    $summaryLines.Add((Csv-Row @($r.Number, $r.Name, $r.Items, ("{0:N2}" -f $r.Total))))
+    $refundNote = if ($r.Total -lt 0) { "Refund / זיכוי" } else { "" }
+    $summaryLines.Add((Csv-Row @($r.Number, $r.Name, $r.Items, ("{0:N2}" -f $r.Total), $refundNote)))
 }
 $summaryLines.Add("")
 $summaryLines.Add((Csv-Row @("", "Grand Total", "", ("{0:N2}" -f $grandTotal))))

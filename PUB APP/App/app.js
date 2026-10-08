@@ -3,6 +3,7 @@
   var STORAGE_KEY = "stablePubData_v1";
   var LANG_KEY = "stablePubLang";
   var SESSION_KEY = "stablePubSession";
+  var REFUND_ID = "__refund__";
 
   // ---------- Translation helpers ----------
   function getLang(){
@@ -341,6 +342,13 @@
 
   function money(n){
     return (Math.round(n*100)/100).toFixed(2);
+  }
+  // Currency + amount for on-screen display. Negative amounts (refunds) are
+  // isolated as left-to-right so the minus sign stays on the left of the
+  // number even in the Hebrew (right-to-left) layout.
+  function moneyDisplay(n){
+    if(n < 0) return "⁦-" + currency() + money(Math.abs(n)) + "⁩";
+    return currency() + money(n);
   }
   function currency(){
     return data.settings.currency || "";
@@ -870,6 +878,14 @@
       });
       itemSel.appendChild(optgroup);
     });
+    // Built-in "Refund" item - always last, not part of the editable menu.
+    if(matchesQuery(t("refund_item_name"), itemQuery)){
+      anyItems = true;
+      var refundOpt = document.createElement("option");
+      refundOpt.value = REFUND_ID;
+      refundOpt.textContent = t("refund_item_name");
+      itemSel.appendChild(refundOpt);
+    }
     if(!anyItems){
       var noneItemOpt = document.createElement("option");
       noneItemOpt.value = ""; noneItemOpt.textContent = t("no_matching_items");
@@ -879,6 +895,7 @@
     updateLogItemPreview();
     updateLogItemExtras();
     updateLogEventFields();
+    updateLogRefundFields();
   }
 
   function updateLogItemPreview(){
@@ -940,6 +957,14 @@
     summary.textContent = text;
   }
 
+  function updateLogRefundFields(){
+    var isRefund = document.getElementById("logItem").value === REFUND_ID;
+    document.getElementById("logRefundAmountField").style.display = isRefund ? "" : "none";
+    document.getElementById("logRefundNoteField").style.display = isRefund ? "" : "none";
+    document.getElementById("logQtyField").style.display = isRefund ? "none" : "";
+    document.getElementById("logPriceField").style.display = isRefund ? "none" : "";
+  }
+
   function updateLogEventFields(){
     var itemSel = document.getElementById("logItem");
     var it = data.items.find(function(x){return x.id===itemSel.value;});
@@ -955,6 +980,7 @@
     updateLogItemPreview();
     updateLogItemExtras();
     updateLogEventFields();
+    updateLogRefundFields();
   });
   document.getElementById("logExtrasBox").addEventListener("change", updateLogPriceSummary);
   document.getElementById("logQty").addEventListener("input", updateLogPriceSummary);
@@ -989,11 +1015,11 @@
           '<td>'+escapeHtml(member?member.name:t("removed_member"))+'</td>'+
           '<td>'+escapeHtml(e.itemName)+escapeHtml(entryExtrasSuffix(e))+escapeHtml(entryEventSuffix(e))+'</td>'+
           '<td>'+e.qty+'</td>'+
-          '<td>'+currency()+money(e.unitPrice)+'</td>'+
-          '<td>'+currency()+money(lineTotal)+'</td>'+
+          '<td>'+moneyDisplay(e.unitPrice)+'</td>'+
+          '<td>'+moneyDisplay(lineTotal)+'</td>'+
           '<td>'+escapeHtml(e.loggedBy||"-")+'</td>'+
           '<td></td>';
-        if(data.settings.printFood || data.settings.printDrinks){
+        if((data.settings.printFood || data.settings.printDrinks) && e.category !== "Refund"){
           var reprintBtn = document.createElement("button");
           reprintBtn.className="small"; reprintBtn.style.marginRight="6px";
           reprintBtn.textContent=t("btn_reprint");
@@ -1024,7 +1050,7 @@
         tr.children[8].appendChild(delBtn);
         tbody.appendChild(tr);
       });
-    document.getElementById("logDayTotal").textContent = currency() + money(dayTotal);
+    document.getElementById("logDayTotal").textContent = moneyDisplay(dayTotal);
   }
 
 
@@ -1037,6 +1063,7 @@
     if(!date){ alert(t("alert_pick_date")); return; }
     if(!memberId){ alert(t("alert_select_member")); return; }
     if(!itemId){ alert(t("alert_select_item")); return; }
+    if(itemId === REFUND_ID){ addRefundEntry(date, memberId); return; }
     if(isNaN(qty) || qty<1){ alert(t("alert_enter_valid_qty")); return; }
     var item = data.items.find(function(it){return it.id===itemId;});
     var isEvent = item.category === "Event";
@@ -1090,6 +1117,32 @@
     if(isEvent) renderCalendar();
     maybeAutoPrintTicket(newEntry);
   });
+
+  function addRefundEntry(date, memberId){
+    var amount = parseFloat(document.getElementById("refundAmount").value);
+    var note = document.getElementById("refundNote").value.trim();
+    if(isNaN(amount) || amount <= 0){ alert(t("alert_enter_refund_amount")); return; }
+    var member = data.members.find(function(m){return m.id===memberId;});
+    if(!confirm(t("confirm_refund", {amount: currency()+money(amount), member: member ? member.name : ""}))) return;
+    var loggedInUser = getCurrentUser();
+    data.entries.push({
+      id: uid(),
+      memberId: memberId,
+      itemId: "",
+      itemName: t("refund_item_name") + (note ? " - " + note : ""),
+      category: "Refund",
+      unitPrice: -amount,
+      extras: [],
+      qty: 1,
+      date: date,
+      ts: Date.now(),
+      loggedBy: loggedInUser ? loggedInUser.username : ""
+    });
+    save();
+    document.getElementById("refundAmount").value = "";
+    document.getElementById("refundNote").value = "";
+    renderLog();
+  }
 
   function maybeAutoPrintTicket(e){
     var shouldPrint = (e.category === "Food" && data.settings.printFood) ||
@@ -1580,7 +1633,7 @@
     var byMember = {};
     entries.forEach(function(e){
       if(!byMember[e.memberId]) byMember[e.memberId] = {items:0, total:0};
-      byMember[e.memberId].items += e.qty;
+      if(e.category !== "Refund") byMember[e.memberId].items += e.qty;
       byMember[e.memberId].total += entryLineTotal(e);
     });
     var rows = Object.keys(byMember).map(function(mid){
@@ -1605,7 +1658,7 @@
     var rows = buildSummary(monthStr);
     var grand = 0;
     rows.forEach(function(r){ grand += r.total; });
-    document.getElementById("reportGrandTotal").textContent = currency() + money(grand);
+    document.getElementById("reportGrandTotal").textContent = moneyDisplay(grand);
 
     var reportQuery = document.getElementById("searchReport").value;
     var visibleRows = rows.filter(function(r){ return matchesQuery(r.number + " " + r.name, reportQuery); });
@@ -1616,7 +1669,7 @@
         '<td>'+escapeHtml(r.number)+'</td>'+
         '<td>'+escapeHtml(r.name)+'</td>'+
         '<td>'+r.items+'</td>'+
-        '<td>'+currency()+money(r.total)+'</td>'+
+        '<td>'+moneyDisplay(r.total)+'</td>'+
         '<td><button class="small" data-mid="'+r.memberId+'">'+t("btn_details")+'</button></td>';
       tbody.appendChild(tr);
     });
@@ -1654,7 +1707,7 @@
     var html = '<h3 style="margin-top:20px;">'+escapeHtml(label)+t("detail_heading_suffix")+'</h3>';
     html += '<table><thead><tr><th>'+t("th_date")+'</th><th>'+t("th_item")+'</th><th>'+t("th_qty")+'</th><th>'+t("th_unit_price")+'</th><th>'+t("th_line_total")+'</th><th>'+t("th_logged_by")+'</th>'+(canDelete ? '<th></th>' : '')+'</tr></thead><tbody>';
     entries.forEach(function(e){
-      html += '<tr><td>'+displayDate(e.date)+'</td><td>'+escapeHtml(e.itemName)+escapeHtml(entryExtrasSuffix(e))+escapeHtml(entryEventSuffix(e))+'</td><td>'+e.qty+'</td><td>'+currency()+money(e.unitPrice)+'</td><td>'+currency()+money(entryLineTotal(e))+'</td><td>'+escapeHtml(e.loggedBy||"-")+'</td>'+
+      html += '<tr><td>'+displayDate(e.date)+'</td><td>'+escapeHtml(e.itemName)+escapeHtml(entryExtrasSuffix(e))+escapeHtml(entryEventSuffix(e))+'</td><td>'+e.qty+'</td><td>'+moneyDisplay(e.unitPrice)+'</td><td>'+moneyDisplay(entryLineTotal(e))+'</td><td>'+escapeHtml(e.loggedBy||"-")+'</td>'+
         (canDelete ? '<td><button class="small" data-entry-id="'+escapeHtml(e.id)+'">'+escapeHtml(t("btn_delete"))+'</button></td>' : '')+'</tr>';
     });
     html += '</tbody></table>';
@@ -1695,7 +1748,7 @@
     var grand = 0;
     rows.forEach(function(r){
       grand += r.total;
-      out.push([r.number, r.name, r.items, money(r.total)]);
+      out.push([r.number, r.name, r.items, money(r.total), r.total < 0 ? "Refund / זיכוי" : ""]);
     });
     out.push([]);
     out.push(["", t("csv_grand_total"), "", money(grand)]);

@@ -112,11 +112,19 @@
           <label data-i18n="label_event_end">End Time</label>
           <input type="text" id="logEventEnd" class="fld-time" inputmode="numeric" maxlength="5" autocomplete="off" placeholder="HH:MM">
         </div>
-        <div class="field">
+        <div class="field" id="logRefundAmountField" style="display:none;">
+          <label data-i18n="label_refund_amount">Refund Amount</label>
+          <input type="number" id="refundAmount" min="0" step="0.5" style="width:110px;">
+        </div>
+        <div class="field" id="logRefundNoteField" style="display:none;">
+          <label data-i18n="label_refund_note">Note (optional)</label>
+          <input type="text" id="refundNote" style="width:180px;">
+        </div>
+        <div class="field" id="logPriceField">
           <label data-i18n="label_line_price">Price</label>
           <div id="logPriceSummary" class="price-summary"></div>
         </div>
-        <div class="field">
+        <div class="field" id="logQtyField">
           <label data-i18n="label_qty">Qty</label>
           <input type="number" id="logQty" value="1" min="1" step="1" style="width:70px;">
         </div>
